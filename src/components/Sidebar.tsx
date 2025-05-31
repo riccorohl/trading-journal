@@ -34,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
           <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-wide">TRADEZELLA</span>
+          <span className="text-xl font-bold tracking-wide">Chart Journal</span>
         </div>
       </div>
 
