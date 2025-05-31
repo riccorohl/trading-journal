@@ -5,9 +5,12 @@ import Dashboard from '../components/Dashboard';
 import DailyJournal from '../components/DailyJournal';
 import TradeLog from '../components/TradeLog';
 import Notebook from '../components/Notebook';
+import AddTrade from '../components/AddTrade';
+import { TradeProvider } from '../contexts/TradeContext';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [showAddTrade, setShowAddTrade] = useState(false);
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -32,18 +35,28 @@ const Index = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="flex-1 overflow-hidden">
-        {currentPage === 'notebook' ? (
-          <Notebook />
-        ) : (
-          <div className="h-screen overflow-y-auto">
-            {renderCurrentPage()}
-          </div>
+    <TradeProvider>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar 
+          currentPage={currentPage} 
+          onPageChange={setCurrentPage}
+          onAddTrade={() => setShowAddTrade(true)}
+        />
+        <div className="flex-1 overflow-hidden">
+          {currentPage === 'notebook' ? (
+            <Notebook />
+          ) : (
+            <div className="h-screen overflow-y-auto">
+              {renderCurrentPage()}
+            </div>
+          )}
+        </div>
+        
+        {showAddTrade && (
+          <AddTrade onClose={() => setShowAddTrade(false)} />
         )}
       </div>
-    </div>
+    </TradeProvider>
   );
 };
 

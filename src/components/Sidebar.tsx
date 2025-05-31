@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 interface SidebarProps {
   currentPage: string;
   onPageChange: (page: string) => void;
+  onAddTrade: () => void;
 }
 
 const menuItems = [
@@ -25,7 +26,7 @@ const menuItems = [
   { id: 'playbooks', label: 'Playbooks', icon: Play },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade }) => {
   return (
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col">
       {/* Logo */}
@@ -40,7 +41,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
 
       {/* Add Trade Button */}
       <div className="p-4">
-        <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">
+        <button 
+          onClick={onAddTrade}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span className="font-medium">Add Trade</span>
         </button>
