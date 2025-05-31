@@ -7,8 +7,6 @@ import {
   FileText, 
   BarChart3,
   Play,
-  Target,
-  Settings,
   Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,9 +23,6 @@ const menuItems = [
   { id: 'notebook', label: 'Notebook', icon: FileText },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
-  { id: 'tracker', label: 'Progress Tracker', icon: Target },
-  { id: 'replay', label: 'Trade Replay', icon: Play },
-  { id: 'resources', label: 'Resource Center', icon: Settings },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
