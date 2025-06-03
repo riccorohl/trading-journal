@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
@@ -154,11 +153,7 @@ const ImportTrades: React.FC<ImportTradesProps> = ({ onClose }) => {
           {csvHeaders.map((header, index) => (
             <span
               key={index}
-              className={`px-2 py-1 rounded text-xs ${
-                QUANTOWER_COLUMNS.includes(header)
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
+              className="px-2 py-1 rounded text-xs bg-green-100 text-green-800"
             >
               {header}
             </span>
