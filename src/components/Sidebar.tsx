@@ -7,7 +7,8 @@ import {
   FileText, 
   BarChart3,
   Play,
-  Plus
+  Plus,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +16,7 @@ interface SidebarProps {
   currentPage: string;
   onPageChange: (page: string) => void;
   onAddTrade: () => void;
+  onImportTrades: () => void;
 }
 
 const menuItems = [
@@ -26,7 +28,7 @@ const menuItems = [
   { id: 'playbooks', label: 'Playbooks', icon: Play },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade, onImportTrades }) => {
   return (
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col">
       {/* Logo */}
@@ -39,14 +41,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade
         </div>
       </div>
 
-      {/* Add Trade Button */}
-      <div className="p-4">
+      {/* Action Buttons */}
+      <div className="p-4 space-y-2">
         <button 
           onClick={onAddTrade}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span className="font-medium">Add Trade</span>
+        </button>
+        
+        <button 
+          onClick={onImportTrades}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          <span className="font-medium">Import Trades</span>
         </button>
       </div>
 

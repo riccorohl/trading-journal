@@ -6,11 +6,13 @@ import DailyJournal from '../components/DailyJournal';
 import TradeLog from '../components/TradeLog';
 import Notebook from '../components/Notebook';
 import AddTrade from '../components/AddTrade';
+import ImportTrades from '../components/ImportTrades';
 import { TradeProvider } from '../contexts/TradeContext';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showAddTrade, setShowAddTrade] = useState(false);
+  const [showImportTrades, setShowImportTrades] = useState(false);
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -41,6 +43,7 @@ const Index = () => {
           currentPage={currentPage} 
           onPageChange={setCurrentPage}
           onAddTrade={() => setShowAddTrade(true)}
+          onImportTrades={() => setShowImportTrades(true)}
         />
         <div className="flex-1 overflow-hidden">
           {currentPage === 'notebook' ? (
@@ -54,6 +57,10 @@ const Index = () => {
         
         {showAddTrade && (
           <AddTrade onClose={() => setShowAddTrade(false)} />
+        )}
+        
+        {showImportTrades && (
+          <ImportTrades onClose={() => setShowImportTrades(false)} />
         )}
       </div>
     </TradeProvider>
