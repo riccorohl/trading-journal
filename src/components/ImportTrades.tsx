@@ -182,7 +182,7 @@ const ImportTrades: React.FC<ImportTradesProps> = ({ onClose }) => {
                   ))}
                   {csvHeaders.length > 6 && (
                     <th className="px-3 py-2 text-left font-medium text-gray-700">
-                      +{csvHeaders.length - 6} more...
+                      +{csvHeaders.length - 6} more columns
                     </th>
                   )}
                 </tr>
@@ -196,7 +196,9 @@ const ImportTrades: React.FC<ImportTradesProps> = ({ onClose }) => {
                       </td>
                     ))}
                     {csvHeaders.length > 6 && (
-                      <td className="px-3 py-2 text-gray-400">...</td>
+                      <td className="px-3 py-2 text-gray-400">
+                        +{csvHeaders.length - 6} more
+                      </td>
                     )}
                   </tr>
                 ))}
