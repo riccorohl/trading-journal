@@ -1,7 +1,7 @@
 
 import React from 'react';
 import MetricCard from './MetricCard';
-import { TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { TrendingUp, Calendar, DollarSign, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
 const Dashboard: React.FC = () => {
@@ -15,6 +15,7 @@ const Dashboard: React.FC = () => {
   const losers = closedTrades.filter(trade => (trade.pnl || 0) < 0);
   const avgWin = winners.length > 0 ? winners.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / winners.length : 0;
   const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losers.length) : 0;
+  const avgTradePnL = closedTrades.length > 0 ? closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / closedTrades.length : 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -68,25 +69,30 @@ const Dashboard: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Zella Score */}
+        {/* Average Trade P&L */}
         <div className="bg-white rounded-lg p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-gray-600 flex items-center">
-              Journal score
+              Average Trade P&L
               <span className="ml-1 text-gray-400">ⓘ</span>
             </h3>
           </div>
           <div className="flex items-center justify-center h-48">
             <div className="text-center">
               <div className="w-32 h-32 border-4 border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-gray-400">📊</span>
+                <BarChart3 className="w-16 h-16 text-gray-400" />
               </div>
-              <p className="text-sm text-gray-500">
-                {trades.length === 0 
-                  ? "Available once there is at least 1 trade." 
-                  : "Coming soon - analyzing your trading performance."
-                }
-              </p>
+              <div className="text-center">
+                <div className={`text-2xl font-bold mb-2 ${avgTradePnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {closedTrades.length === 0 ? "--" : `$${avgTradePnL.toFixed(2)}`}
+                </div>
+                <p className="text-sm text-gray-500">
+                  {closedTrades.length === 0 
+                    ? "Available once there is at least 1 closed trade." 
+                    : `Based on ${closedTrades.length} closed trade${closedTrades.length === 1 ? '' : 's'}`
+                  }
+                </p>
+              </div>
             </div>
           </div>
         </div>
