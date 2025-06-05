@@ -1,6 +1,7 @@
 
 import React from 'react';
 import MetricCard from './MetricCard';
+import CalendarWidget from './CalendarWidget';
 import { TrendingUp, Calendar, DollarSign, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
@@ -66,6 +67,9 @@ const Dashboard: React.FC = () => {
           color="green"
         />
       </div>
+
+      {/* Calendar Widget */}
+      <CalendarWidget />
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
