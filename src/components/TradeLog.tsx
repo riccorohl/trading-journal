@@ -1,12 +1,16 @@
 
 import React, { useState } from 'react';
 import MetricCard from './MetricCard';
+import TradeDetailModal from './TradeDetailModal';
 import { Upload, Edit, Trash2 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
+import { Trade } from '../types/trade';
 
 const TradeLog: React.FC = () => {
   const { trades, deleteTrade, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const totalPnL = getTotalPnL();
   const winRate = getWinRate();
@@ -27,6 +31,16 @@ const TradeLog: React.FC = () => {
     setEditingTradeId(tradeId);
     // TODO: Implement edit modal/form
     console.log('Edit trade:', tradeId);
+  };
+
+  const handleTradeClick = (trade: Trade) => {
+    setSelectedTrade(trade);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedTrade(null);
   };
 
   return (
@@ -125,7 +139,11 @@ const TradeLog: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {trades.map((trade) => (
-                  <tr key={trade.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={trade.id} 
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleTradeClick(trade)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {trade.symbol}
                     </td>
@@ -171,13 +189,19 @@ const TradeLog: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => handleEditTrade(trade.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTrade(trade.id);
+                          }}
                           className="text-blue-600 hover:text-blue-900 transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteTrade(trade.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTrade(trade.id);
+                          }}
                           className="text-red-600 hover:text-red-900 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -191,6 +215,12 @@ const TradeLog: React.FC = () => {
           </div>
         </div>
       )}
+
+      <TradeDetailModal 
+        trade={selectedTrade}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
     </div>
   );
 };
