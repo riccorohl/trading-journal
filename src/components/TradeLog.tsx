@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import MetricCard from './MetricCard';
 import { Upload, Edit, Trash2 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
 const TradeLog: React.FC = () => {
-  const { trades, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
+  const { trades, deleteTrade, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
+  const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   
   const totalPnL = getTotalPnL();
   const winRate = getWinRate();
@@ -15,6 +16,18 @@ const TradeLog: React.FC = () => {
   const losers = closedTrades.filter(trade => (trade.pnl || 0) < 0);
   const avgWin = winners.length > 0 ? winners.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / winners.length : 0;
   const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losers.length) : 0;
+
+  const handleDeleteTrade = (tradeId: string) => {
+    if (window.confirm('Are you sure you want to delete this trade?')) {
+      deleteTrade(tradeId);
+    }
+  };
+
+  const handleEditTrade = (tradeId: string) => {
+    setEditingTradeId(tradeId);
+    // TODO: Implement edit modal/form
+    console.log('Edit trade:', tradeId);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -157,10 +170,16 @@ const TradeLog: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button 
+                          onClick={() => handleEditTrade(trade.id)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          onClick={() => handleDeleteTrade(trade.id)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
