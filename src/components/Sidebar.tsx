@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, 
   BookOpen, 
   TrendingUp, 
-  FileText, 
   BarChart3,
   Play,
   Plus,
@@ -23,7 +21,6 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'journal', label: 'Daily Journal', icon: BookOpen },
   { id: 'trades', label: 'Trades', icon: TrendingUp },
-  { id: 'notebook', label: 'Notebook', icon: FileText },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
 ];

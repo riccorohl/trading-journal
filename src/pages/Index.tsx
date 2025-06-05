@@ -4,7 +4,6 @@ import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
 import DailyJournal from '../components/DailyJournal';
 import TradeLog from '../components/TradeLog';
-import Notebook from '../components/Notebook';
 import AddTrade from '../components/AddTrade';
 import ImportTrades from '../components/ImportTrades';
 import { TradeProvider } from '../contexts/TradeContext';
@@ -22,8 +21,6 @@ const Index = () => {
         return <DailyJournal />;
       case 'trades':
         return <TradeLog />;
-      case 'notebook':
-        return <Notebook />;
       default:
         return (
           <div className="p-6">
@@ -46,13 +43,9 @@ const Index = () => {
           onImportTrades={() => setShowImportTrades(true)}
         />
         <div className="flex-1 overflow-hidden">
-          {currentPage === 'notebook' ? (
-            <Notebook />
-          ) : (
-            <div className="h-screen overflow-y-auto">
-              {renderCurrentPage()}
-            </div>
-          )}
+          <div className="h-screen overflow-y-auto">
+            {renderCurrentPage()}
+          </div>
         </div>
         
         {showAddTrade && (
