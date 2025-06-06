@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
@@ -12,13 +13,19 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showAddTrade, setShowAddTrade] = useState(false);
   const [showImportTrades, setShowImportTrades] = useState(false);
+  const [selectedJournalDate, setSelectedJournalDate] = useState<string | null>(null);
+
+  const handleNavigateToJournal = (date: string) => {
+    setSelectedJournalDate(date);
+    setCurrentPage('journal');
+  };
 
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigateToJournal={handleNavigateToJournal} />;
       case 'journal':
-        return <DailyJournal />;
+        return <DailyJournal selectedDate={selectedJournalDate} />;
       case 'trades':
         return <TradeLog />;
       case 'playbooks':
@@ -40,7 +47,12 @@ const Index = () => {
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar 
           currentPage={currentPage} 
-          onPageChange={setCurrentPage}
+          onPageChange={(page) => {
+            setCurrentPage(page);
+            if (page !== 'journal') {
+              setSelectedJournalDate(null);
+            }
+          }}
           onAddTrade={() => setShowAddTrade(true)}
           onImportTrades={() => setShowImportTrades(true)}
         />

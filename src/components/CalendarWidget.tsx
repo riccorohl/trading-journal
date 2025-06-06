@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
-const CalendarWidget: React.FC = () => {
+interface CalendarWidgetProps {
+  onDayClick?: (date: string) => void;
+}
+
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
   const { trades } = useTradeContext();
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -47,12 +51,19 @@ const CalendarWidget: React.FC = () => {
     setCurrentDate(newDate);
   };
 
+  const handleDayClick = (day: number) => {
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (onDayClick) {
+      onDayClick(dateString);
+    }
+  };
+
   const renderCalendarDays = () => {
     const days = [];
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+      days.push(<div key={`empty-${i}`} className="p-2 aspect-square"></div>);
     }
     
     // Add days of the month
@@ -60,7 +71,7 @@ const CalendarWidget: React.FC = () => {
       const dailyData = getDailyPnL(day);
       const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
       
-      let cellClass = "p-2 h-20 border border-gray-200 text-xs relative cursor-pointer hover:bg-gray-50 transition-colors";
+      let cellClass = "p-2 aspect-square border border-gray-200 text-xs relative cursor-pointer hover:bg-gray-50 transition-colors flex flex-col";
       
       if (dailyData) {
         if (dailyData.pnl > 0) {
@@ -71,14 +82,18 @@ const CalendarWidget: React.FC = () => {
       }
       
       if (isToday) {
-        cellClass += " ring-2 ring-blue-500";
+        cellClass += " ring-2 ring-blue-500 ring-inset";
       }
       
       days.push(
-        <div key={day} className={cellClass}>
+        <div 
+          key={day} 
+          className={cellClass}
+          onClick={() => handleDayClick(day)}
+        >
           <div className="font-medium text-gray-900 mb-1">{day}</div>
           {dailyData && (
-            <div className="text-center">
+            <div className="flex-1 flex flex-col justify-center items-center">
               <div className={`font-bold text-sm ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                 ${dailyData.pnl >= 0 ? '+' : ''}${dailyData.pnl.toFixed(0)}
               </div>
@@ -124,7 +139,7 @@ const CalendarWidget: React.FC = () => {
       {/* Days of Week Header */}
       <div className="grid grid-cols-7 gap-0 mb-2">
         {daysOfWeek.map(day => (
-          <div key={day} className="p-2 text-center text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200">
+          <div key={day} className="p-2 text-center text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 aspect-square flex items-center justify-center">
             {day}
           </div>
         ))}

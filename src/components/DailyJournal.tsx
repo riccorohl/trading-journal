@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTradeContext } from '../contexts/TradeContext';
 
 interface JournalEntry {
   date: string;
@@ -19,6 +19,10 @@ interface JournalEntry {
   winrate: number;
   volume: number;
   profitFactor: number;
+}
+
+interface DailyJournalProps {
+  selectedDate?: string | null;
 }
 
 const mockEntries: JournalEntry[] = [
@@ -60,10 +64,46 @@ const mockEntries: JournalEntry[] = [
   }
 ];
 
-const DailyJournal: React.FC = () => {
+const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
+  const { trades } = useTradeContext();
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState('May 2025');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  // Auto-open the selected date from calendar
+  useEffect(() => {
+    if (selectedDate) {
+      const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      setSelectedDay(formattedDate);
+    }
+  }, [selectedDate]);
+
+  const getTradeDataForDate = (dateString: string) => {
+    // Convert display date to ISO format for comparison
+    const date = new Date(dateString);
+    const isoDate = date.toISOString().split('T')[0];
+    
+    const dayTrades = trades.filter(trade => trade.date === isoDate);
+    const closedTrades = dayTrades.filter(trade => trade.status === 'closed');
+    const winners = closedTrades.filter(trade => (trade.pnl || 0) > 0);
+    const losers = closedTrades.filter(trade => (trade.pnl || 0) < 0);
+    const netPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const winRate = closedTrades.length > 0 ? (winners.length / closedTrades.length) * 100 : 0;
+
+    return {
+      netPnL,
+      totalTrades: dayTrades.length,
+      winners: winners.length,
+      losers: losers.length,
+      winrate: winRate,
+      trades: dayTrades
+    };
+  };
 
   const toggleExpanded = (date: string) => {
     const newExpanded = new Set(expandedEntries);
@@ -116,6 +156,7 @@ const DailyJournal: React.FC = () => {
       <div className="space-y-4">
         {mockEntries.map((entry) => {
           const isExpanded = expandedEntries.has(entry.date);
+          const tradeData = getTradeDataForDate(entry.date);
           
           return (
             <div key={entry.date} className="bg-white rounded-lg border border-gray-200">
@@ -132,7 +173,7 @@ const DailyJournal: React.FC = () => {
                   )}
                   <div>
                     <h3 className="font-medium text-gray-900">{entry.date}</h3>
-                    <p className="text-sm text-gray-500">Net P&L ${entry.netPnL.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">Net P&L ${tradeData.netPnL.toFixed(2)}</p>
                   </div>
                 </div>
                 
@@ -152,40 +193,42 @@ const DailyJournal: React.FC = () => {
               {isExpanded && (
                 <div className="border-t border-gray-200 p-4">
                   <div className="text-center text-gray-500 mb-4">
-                    No Closed NET P&L on this day
+                    {tradeData.totalTrades === 0 ? 'No Closed NET P&L on this day' : `${tradeData.totalTrades} trades on this day`}
                   </div>
                   
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{entry.totalTrades}</div>
+                      <div className="text-lg font-semibold text-gray-900">{tradeData.totalTrades}</div>
                       <div className="text-sm text-gray-500">Total trades</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{entry.winners}</div>
+                      <div className="text-lg font-semibold text-gray-900">{tradeData.winners}</div>
                       <div className="text-sm text-gray-500">Winners</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">${entry.grossPnL.toFixed(2)}</div>
+                      <div className="text-lg font-semibold text-gray-900">${tradeData.netPnL.toFixed(2)}</div>
                       <div className="text-sm text-gray-500">Gross P&L</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">${entry.commissions.toFixed(2)}</div>
+                      <div className="text-lg font-semibold text-gray-900">$0.00</div>
                       <div className="text-sm text-gray-500">Commissions</div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">--</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {tradeData.totalTrades === 0 ? '--' : `${tradeData.winrate.toFixed(1)}%`}
+                      </div>
                       <div className="text-sm text-gray-500">Winrate</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{entry.losers}</div>
+                      <div className="text-lg font-semibold text-gray-900">{tradeData.losers}</div>
                       <div className="text-sm text-gray-500">Losers</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{entry.volume}</div>
+                      <div className="text-lg font-semibold text-gray-900">0</div>
                       <div className="text-sm text-gray-500">Volume</div>
                     </div>
                     <div className="text-center">

@@ -38,7 +38,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   const strokeDashoffset = circumference - (progressValue / 100) * circumference;
 
   return (
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
+    <div className="bg-white rounded-lg p-6 border border-gray-200 min-h-[140px]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-gray-600 flex items-center">
           {title}
@@ -46,15 +46,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
         </h3>
       </div>
       
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between h-full">
+        <div className="flex-1">
           <div className="text-2xl font-bold text-gray-900">{value}</div>
-          {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
+          {subtitle && <div className="text-sm text-gray-500 mt-1">{subtitle}</div>}
         </div>
         
         {showProgress && (
-          <div className="relative w-20 h-20">
-            <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+          <div className="relative w-16 h-16 ml-4 flex-shrink-0">
+            <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
               <circle
                 cx="50"
                 cy="50"

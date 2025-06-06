@@ -5,7 +5,11 @@ import CalendarWidget from './CalendarWidget';
 import { TrendingUp, Calendar, DollarSign, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigateToJournal?: (date: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   const { getTotalPnL, getWinRate, getProfitFactor, trades } = useTradeContext();
   
   const totalPnL = getTotalPnL();
@@ -17,6 +21,12 @@ const Dashboard: React.FC = () => {
   const avgWin = winners.length > 0 ? winners.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / winners.length : 0;
   const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losers.length) : 0;
   const avgTradePnL = closedTrades.length > 0 ? closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / closedTrades.length : 0;
+
+  const handleDayClick = (date: string) => {
+    if (onNavigateToJournal) {
+      onNavigateToJournal(date);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -36,7 +46,7 @@ const Dashboard: React.FC = () => {
         <MetricCard 
           title="Net P&L" 
           value={totalPnL === 0 ? "--" : `$${totalPnL.toFixed(2)}`}
-          subtitle={trades.length.toString()}
+          subtitle={`${trades.length} trades taken`}
           color={totalPnL >= 0 ? "green" : "red"}
         />
         <MetricCard 
@@ -69,7 +79,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Calendar Widget */}
-      <CalendarWidget />
+      <CalendarWidget onDayClick={handleDayClick} />
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
