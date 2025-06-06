@@ -63,7 +63,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2 aspect-square"></div>);
+      days.push(<div key={`empty-${i}`} className="h-12 w-full"></div>);
     }
     
     // Add days of the month
@@ -71,7 +71,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       const dailyData = getDailyPnL(day);
       const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
       
-      let cellClass = "p-2 aspect-square border border-gray-200 text-xs relative cursor-pointer hover:bg-gray-50 transition-colors flex flex-col";
+      let cellClass = "h-12 w-full border border-gray-200 text-xs relative cursor-pointer hover:bg-gray-50 transition-colors flex flex-col justify-center items-center";
       
       if (dailyData) {
         if (dailyData.pnl > 0) {
@@ -91,14 +91,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
           className={cellClass}
           onClick={() => handleDayClick(day)}
         >
-          <div className="font-medium text-gray-900 mb-1">{day}</div>
+          <div className="font-medium text-gray-900 text-xs">{day}</div>
           {dailyData && (
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <div className={`font-bold text-sm ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+            <div className="text-center">
+              <div className={`font-bold text-xs ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                 ${dailyData.pnl >= 0 ? '+' : ''}${dailyData.pnl.toFixed(0)}
-              </div>
-              <div className="text-gray-600 text-xs">
-                {dailyData.tradeCount} trade{dailyData.tradeCount === 1 ? '' : 's'}
               </div>
             </div>
           )}
@@ -112,7 +109,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
   return (
     <div className="bg-white rounded-lg p-6 border border-gray-200">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-gray-600 flex items-center">
           Trading Calendar
           <span className="ml-1 text-gray-400">ⓘ</span>
@@ -137,9 +134,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       </div>
 
       {/* Days of Week Header */}
-      <div className="grid grid-cols-7 gap-0 mb-2">
+      <div className="grid grid-cols-7 gap-0 mb-1">
         {daysOfWeek.map(day => (
-          <div key={day} className="p-2 text-center text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 aspect-square flex items-center justify-center">
+          <div key={day} className="h-8 text-center text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 flex items-center justify-center">
             {day}
           </div>
         ))}
@@ -153,15 +150,15 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       {/* Legend */}
       <div className="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200">
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-green-100 border border-gray-200 rounded"></div>
+          <div className="w-3 h-3 bg-green-100 border border-gray-200 rounded"></div>
           <span className="text-xs text-gray-600">Winning Day</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-red-100 border border-gray-200 rounded"></div>
+          <div className="w-3 h-3 bg-red-100 border border-gray-200 rounded"></div>
           <span className="text-xs text-gray-600">Losing Day</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-white border border-gray-200 rounded"></div>
+          <div className="w-3 h-3 bg-white border border-gray-200 rounded"></div>
           <span className="text-xs text-gray-600">No Trades</span>
         </div>
       </div>
