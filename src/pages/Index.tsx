@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
 import DailyJournal from '../components/DailyJournal';
 import TradeLog from '../components/TradeLog';
+import Playbooks from '../components/Playbooks';
 import AddTrade from '../components/AddTrade';
 import ImportTrades from '../components/ImportTrades';
 import { TradeProvider } from '../contexts/TradeContext';
@@ -21,6 +21,8 @@ const Index = () => {
         return <DailyJournal />;
       case 'trades':
         return <TradeLog />;
+      case 'playbooks':
+        return <Playbooks />;
       default:
         return (
           <div className="p-6">
