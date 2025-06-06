@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { Plus, BookOpen } from 'lucide-react';
+import { Plus, BookOpen, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Playbook {
   id: string;
@@ -15,11 +16,15 @@ interface Playbook {
   entryParameters: string;
   exitParameters: string;
   color: string;
+  timesUsed?: number;
+  tradesWon?: number;
+  tradesLost?: number;
 }
 
 const Playbooks = () => {
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [showAddPlaybook, setShowAddPlaybook] = useState(false);
+  const [selectedPlaybook, setSelectedPlaybook] = useState<Playbook | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -39,7 +44,10 @@ const Playbooks = () => {
     
     const newPlaybook: Playbook = {
       id: Date.now().toString(),
-      ...formData
+      ...formData,
+      timesUsed: 0,
+      tradesWon: 0,
+      tradesLost: 0
     };
     
     setPlaybooks([...playbooks, newPlaybook]);
@@ -56,6 +64,16 @@ const Playbooks = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePlaybookClick = (playbook: Playbook) => {
+    setSelectedPlaybook(playbook);
+  };
+
+  const calculateWinRate = (playbook: Playbook) => {
+    const totalTrades = (playbook.tradesWon || 0) + (playbook.tradesLost || 0);
+    if (totalTrades === 0) return 0;
+    return Math.round(((playbook.tradesWon || 0) / totalTrades) * 100);
   };
 
   return (
@@ -77,7 +95,7 @@ const Playbooks = () => {
           <div
             key={playbook.id}
             className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => console.log('Clicked playbook:', playbook.id)}
+            onClick={() => handlePlaybookClick(playbook)}
           >
             <div className="flex items-center space-x-3 mb-3">
               <div 
@@ -88,7 +106,10 @@ const Playbooks = () => {
               </div>
               <h3 className="font-semibold text-gray-900 truncate">{playbook.title}</h3>
             </div>
-            <p className="text-sm text-gray-600 line-clamp-2">{playbook.description}</p>
+            <p className="text-sm text-gray-600 line-clamp-2 mb-2">{playbook.description}</p>
+            <div className="text-xs text-gray-500">
+              Used {playbook.timesUsed || 0} times
+            </div>
           </div>
         ))}
       </div>
@@ -198,6 +219,100 @@ const Playbooks = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Playbook Details Dialog */}
+      <Dialog open={!!selectedPlaybook} onOpenChange={() => setSelectedPlaybook(null)}>
+        <DialogContent className="max-w-3xl">
+          {selectedPlaybook && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: selectedPlaybook.color }}
+                  >
+                    <BookOpen className="w-6 h-6 text-white" />
+                  </div>
+                  <DialogTitle className="text-xl">{selectedPlaybook.title}</DialogTitle>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center">
+                        <BarChart3 className="w-4 h-4 mr-1" />
+                        Times Used
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="text-2xl font-bold">{selectedPlaybook.timesUsed || 0}</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-1 text-green-600" />
+                        Wins
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="text-2xl font-bold text-green-600">{selectedPlaybook.tradesWon || 0}</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center">
+                        <TrendingDown className="w-4 h-4 mr-1 text-red-600" />
+                        Losses
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="text-2xl font-bold text-red-600">{selectedPlaybook.tradesLost || 0}</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="text-2xl font-bold">{calculateWinRate(selectedPlaybook)}%</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Playbook Details */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">Description</Label>
+                    <p className="mt-1 text-gray-600">{selectedPlaybook.description}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">Market Conditions</Label>
+                    <p className="mt-1 text-gray-600">{selectedPlaybook.marketConditions}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">Entry Parameters</Label>
+                    <p className="mt-1 text-gray-600">{selectedPlaybook.entryParameters}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">Exit Parameters</Label>
+                    <p className="mt-1 text-gray-600">{selectedPlaybook.exitParameters}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
