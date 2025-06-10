@@ -118,7 +118,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="h-16"></div>);
+      days.push(<div key={`empty-${i}`} className="h-20"></div>);
     }
     
     // Add days of the month
@@ -126,7 +126,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       const dailyData = getDailyPnL(day);
       const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
       
-      let cellClass = "h-16 p-2 border-r border-b border-gray-100 cursor-pointer transition-colors relative";
+      let cellClass = "h-20 p-3 border-r border-b border-gray-100 cursor-pointer transition-colors relative";
       
       if (dailyData) {
         if (dailyData.pnl > 0) {
@@ -156,7 +156,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
             )}
           </div>
           {isToday && (
-            <div className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full"></div>
+            <div className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full"></div>
           )}
         </div>
       );
@@ -210,7 +210,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-t-lg overflow-hidden">
             {daysOfWeek.map(day => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
+              <div key={day} className="p-4 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
                 {day}
               </div>
             ))}
@@ -223,12 +223,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
         </div>
 
         {/* Weekly Performance Summary */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Weekly Performance Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Weekly Performance Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {weeklyStats.map((week) => (
-              <div key={week.week} className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
+              <div key={week.week} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-start mb-3">
                   <h3 className="text-sm font-medium text-gray-600">Week {week.week}</h3>
                   <div className="text-xs text-gray-500">
                     {week.startDate === week.endDate 
@@ -237,14 +237,14 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
                     }
                   </div>
                 </div>
-                <div className={`text-xl font-bold mb-1 ${week.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold mb-2 ${week.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {week.pnl >= 0 ? '+' : ''}${week.pnl.toFixed(0)}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-sm text-gray-500">
                   {week.tradingDays} trading day{week.tradingDays === 1 ? '' : 's'}
                 </div>
                 {week.tradingDays > 0 && (
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-sm text-gray-500 mt-1">
                     Avg: ${(week.pnl / week.tradingDays).toFixed(0)}/day
                   </div>
                 )}
