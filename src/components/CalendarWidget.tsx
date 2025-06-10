@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Info } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
 interface CalendarWidgetProps {
@@ -41,6 +41,22 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     };
   };
 
+  // Calculate monthly stats
+  const getMonthlyStats = () => {
+    let totalPnL = 0;
+    let tradingDays = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dailyData = getDailyPnL(day);
+      if (dailyData) {
+        totalPnL += dailyData.pnl;
+        tradingDays++;
+      }
+    }
+
+    return { totalPnL, tradingDays };
+  };
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     if (direction === 'prev') {
@@ -63,7 +79,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="h-12 w-full"></div>);
+      days.push(<div key={`empty-${i}`} className="h-24"></div>);
     }
     
     // Add days of the month
@@ -71,33 +87,37 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       const dailyData = getDailyPnL(day);
       const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
       
-      let cellClass = "h-12 w-full border border-gray-200 text-xs relative cursor-pointer hover:bg-gray-50 transition-colors flex flex-col justify-center items-center";
+      let cellClass = "h-24 p-3 border-r border-b border-gray-100 cursor-pointer transition-colors relative";
       
       if (dailyData) {
         if (dailyData.pnl > 0) {
-          cellClass += " bg-green-100 hover:bg-green-200";
+          cellClass += " bg-green-50 hover:bg-green-100";
         } else {
-          cellClass += " bg-red-100 hover:bg-red-200";
+          cellClass += " bg-red-50 hover:bg-red-100";
         }
-      }
-      
-      if (isToday) {
-        cellClass += " ring-2 ring-blue-500 ring-inset";
+      } else {
+        cellClass += " hover:bg-gray-100";
       }
       
       days.push(
-        <div 
-          key={day} 
-          className={cellClass}
-          onClick={() => handleDayClick(day)}
-        >
-          <div className="font-medium text-gray-900 text-xs">{day}</div>
-          {dailyData && (
-            <div className="text-center">
-              <div className={`font-bold text-xs ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                ${dailyData.pnl >= 0 ? '+' : ''}${dailyData.pnl.toFixed(0)}
-              </div>
+        <div key={day} className={cellClass} onClick={() => handleDayClick(day)}>
+          <div className="flex flex-col h-full">
+            <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+              {day}
             </div>
+            {dailyData && (
+              <div className="flex-1 flex flex-col justify-center">
+                <div className={`text-xs font-semibold ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {dailyData.pnl >= 0 ? '+' : ''}{dailyData.pnl.toFixed(0)}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {dailyData.tradeCount} trade{dailyData.tradeCount === 1 ? '' : 's'}
+                </div>
+              </div>
+            )}
+          </div>
+          {isToday && (
+            <div className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full"></div>
           )}
         </div>
       );
@@ -106,60 +126,60 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     return days;
   };
 
+  const monthlyStats = getMonthlyStats();
+
   return (
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-600 flex items-center">
-          Trading Calendar
-          <span className="ml-1 text-gray-400">ⓘ</span>
-        </h3>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigateMonth('prev')}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
-          </button>
-          <h2 className="text-lg font-semibold text-gray-900 min-w-[140px] text-center">
-            {monthNames[currentMonth]} {currentYear}
-          </h2>
-          <button
-            onClick={() => navigateMonth('next')}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-      </div>
-
-      {/* Days of Week Header */}
-      <div className="grid grid-cols-7 gap-0 mb-1">
-        {daysOfWeek.map(day => (
-          <div key={day} className="h-8 text-center text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 flex items-center justify-center">
-            {day}
+    <div className="bg-white min-h-screen p-6 font-sans">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+          <div className="flex flex-wrap items-center space-x-3 sm:space-x-6 mb-4 md:mb-0">
+            <button
+              onClick={() => navigateMonth('prev')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {monthNames[currentMonth]} {currentYear}
+            </h1>
+            <button
+              onClick={() => navigateMonth('next')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="bg-gray-100 px-3 py-1.5 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">This month</span>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-0">
-        {renderCalendarDays()}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-green-100 border border-gray-200 rounded"></div>
-          <span className="text-xs text-gray-600">Winning Day</span>
+          <div className="flex items-center space-x-4 sm:space-x-6">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Monthly stats:</span>
+              <span className={`text-sm font-semibold ${monthlyStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${monthlyStats.totalPnL >= 0 ? '+' : ''}{monthlyStats.totalPnL.toFixed(0)}
+              </span>
+            </div>
+            <Settings className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
+            <Info className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-red-100 border border-gray-200 rounded"></div>
-          <span className="text-xs text-gray-600">Losing Day</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-white border border-gray-200 rounded"></div>
-          <span className="text-xs text-gray-600">No Trades</span>
+
+        {/* Calendar Section */}
+        <div>
+          {/* Days of Week Header */}
+          <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-t-lg overflow-hidden">
+            {daysOfWeek.map(day => (
+              <div key={day} className="p-4 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 border-l border-gray-100 rounded-b-lg overflow-hidden">
+            {renderCalendarDays()}
+          </div>
         </div>
       </div>
     </div>
