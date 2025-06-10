@@ -41,6 +41,45 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     };
   };
 
+  // Calculate weekly stats
+  const getWeeklyStats = () => {
+    const weeks = [];
+    let currentWeekStartDay = 1 - startingDayOfWeek;
+    let weekNumber = 1;
+
+    while (currentWeekStartDay <= daysInMonth) {
+      const weekEndDay = Math.min(currentWeekStartDay + 6, daysInMonth);
+      let weekPnL = 0;
+      let tradingDays = 0;
+
+      // Sum P&L for days within the current week
+      for (let day = Math.max(currentWeekStartDay, 1); day <= weekEndDay; day++) {
+        const dailyData = getDailyPnL(day);
+        if (dailyData) {
+          weekPnL += dailyData.pnl;
+          tradingDays++;
+        }
+      }
+
+      // Calculate week date range for display
+      const weekStartDate = Math.max(currentWeekStartDay, 1);
+      const weekEndDate = Math.min(weekEndDay, daysInMonth);
+
+      weeks.push({
+        week: weekNumber,
+        pnl: weekPnL,
+        tradingDays: tradingDays,
+        startDate: weekStartDate,
+        endDate: weekEndDate
+      });
+
+      currentWeekStartDay += 7;
+      weekNumber++;
+    }
+
+    return weeks;
+  };
+
   // Calculate monthly stats
   const getMonthlyStats = () => {
     let totalPnL = 0;
@@ -79,7 +118,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="h-24"></div>);
+      days.push(<div key={`empty-${i}`} className="h-16"></div>);
     }
     
     // Add days of the month
@@ -87,7 +126,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
       const dailyData = getDailyPnL(day);
       const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
       
-      let cellClass = "h-24 p-3 border-r border-b border-gray-100 cursor-pointer transition-colors relative";
+      let cellClass = "h-16 p-2 border-r border-b border-gray-100 cursor-pointer transition-colors relative";
       
       if (dailyData) {
         if (dailyData.pnl > 0) {
@@ -108,7 +147,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
             {dailyData && (
               <div className="flex-1 flex flex-col justify-center">
                 <div className={`text-xs font-semibold ${dailyData.pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {dailyData.pnl >= 0 ? '+' : ''}{dailyData.pnl.toFixed(0)}
+                  {dailyData.pnl >= 0 ? '+' : ''}${dailyData.pnl.toFixed(0)}
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   {dailyData.tradeCount} trade{dailyData.tradeCount === 1 ? '' : 's'}
@@ -117,7 +156,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
             )}
           </div>
           {isToday && (
-            <div className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full"></div>
+            <div className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full"></div>
           )}
         </div>
       );
@@ -126,6 +165,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     return days;
   };
 
+  const weeklyStats = getWeeklyStats();
   const monthlyStats = getMonthlyStats();
 
   return (
@@ -166,11 +206,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
         </div>
 
         {/* Calendar Section */}
-        <div>
+        <div className="mb-8">
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-t-lg overflow-hidden">
             {daysOfWeek.map(day => (
-              <div key={day} className="p-4 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
+              <div key={day} className="p-3 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
                 {day}
               </div>
             ))}
@@ -179,6 +219,37 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 border-l border-gray-100 rounded-b-lg overflow-hidden">
             {renderCalendarDays()}
+          </div>
+        </div>
+
+        {/* Weekly Performance Summary */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Weekly Performance Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {weeklyStats.map((week) => (
+              <div key={week.week} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-sm font-medium text-gray-600">Week {week.week}</h3>
+                  <div className="text-xs text-gray-500">
+                    {week.startDate === week.endDate 
+                      ? `${week.startDate}`
+                      : `${week.startDate}-${week.endDate}`
+                    }
+                  </div>
+                </div>
+                <div className={`text-xl font-bold mb-1 ${week.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {week.pnl >= 0 ? '+' : ''}${week.pnl.toFixed(0)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {week.tradingDays} trading day{week.tradingDays === 1 ? '' : 's'}
+                </div>
+                {week.tradingDays > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Avg: ${(week.pnl / week.tradingDays).toFixed(0)}/day
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
