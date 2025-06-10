@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText } from 'lucide-react';
+import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -243,147 +244,233 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
         })}
       </div>
 
-      {/* Open Day Modal */}
+      {/* Enhanced Notebook-Style Modal */}
       <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center space-x-2">
-              <Calendar className="w-5 h-5" />
-              <span>Trading Day - {selectedDay}</span>
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+          {/* Custom Header */}
+          <div className="flex items-center justify-between p-6 border-b bg-white">
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-6 h-6 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900">Trading Journal - {selectedDay}</h1>
+            </div>
+            <button 
+              onClick={() => setSelectedDay(null)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="trades">Trades</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="review">Review</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="mt-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <DollarSign className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-600">Net P&L</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">$0.00</div>
+          {/* Main Content Area */}
+          <div className="flex h-full overflow-hidden">
+            {/* Left Sidebar - Trades & Summary */}
+            <div className="w-80 border-r bg-gray-50 flex flex-col">
+              {/* Daily Summary */}
+              <div className="p-4 border-b bg-white">
+                <h3 className="font-semibold text-gray-900 mb-3">Daily Summary</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center p-2 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">$0.00</div>
+                    <div className="text-xs text-blue-600">Net P&L</div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">Total Trades</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">0</div>
+                  <div className="text-center p-2 bg-green-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-600">0</div>
+                    <div className="text-xs text-green-600">Trades</div>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-purple-600">Win Rate</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">--%</div>
+                  <div className="text-center p-2 bg-purple-50 rounded-lg">
+                    <div className="text-lg font-bold text-purple-600">--%</div>
+                    <div className="text-xs text-purple-600">Win Rate</div>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-600">Events</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">0</div>
+                  <div className="text-center p-2 bg-orange-50 rounded-lg">
+                    <div className="text-lg font-bold text-orange-600">0</div>
+                    <div className="text-xs text-orange-600">Events</div>
                   </div>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-gray-900 mb-2">Market Conditions</h3>
-                  <Input placeholder="e.g., Trending market, high volatility..." />
+              </div>
+
+              {/* Trades List */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold text-gray-900">Trades</h3>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                  
+                  {/* Sample Trade Items */}
+                  <div className="space-y-2">
+                    <div className="p-3 bg-white rounded-lg border cursor-pointer hover:bg-gray-50">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-medium text-sm">AAPL</span>
+                        <span className="text-green-600 text-sm font-medium">+$124.50</span>
+                      </div>
+                      <div className="text-xs text-gray-500">09:30 AM - 100 shares</div>
+                    </div>
+                    
+                    <div className="p-3 bg-white rounded-lg border cursor-pointer hover:bg-gray-50">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-medium text-sm">TSLA</span>
+                        <span className="text-red-600 text-sm font-medium">-$45.20</span>
+                      </div>
+                      <div className="text-xs text-gray-500">10:15 AM - 50 shares</div>
+                    </div>
+                    
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No trades recorded for this day
+                    </div>
+                  </div>
                 </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="trades" className="mt-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-gray-900">Trades for this day</h3>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Trade
-                  </Button>
-                </div>
-                <div className="text-center py-8 text-gray-500">
-                  No trades recorded for this day
-                </div>
+            </div>
+
+            {/* Right Main Area - Notebook */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tabs */}
+              <div className="border-b bg-white">
+                <Tabs defaultValue="notes" className="w-full">
+                  <TabsList className="w-full justify-start h-12 bg-transparent border-0 rounded-none">
+                    <TabsTrigger 
+                      value="notes" 
+                      className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none"
+                    >
+                      Notes & Analysis
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="review" 
+                      className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none"
+                    >
+                      Review & Reflection
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="strategy" 
+                      className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none"
+                    >
+                      Strategy & Rules
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  {/* Tab Content */}
+                  <div className="flex-1 overflow-y-auto">
+                    <TabsContent value="notes" className="p-6 space-y-6 m-0">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <Label htmlFor="premarket-notes" className="text-base font-semibold">Pre-Market Analysis</Label>
+                          <Textarea 
+                            id="premarket-notes"
+                            placeholder="Market outlook, planned trades, key levels to watch, earnings/events today..."
+                            className="mt-2 min-h-[200px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="market-conditions" className="text-base font-semibold">Market Conditions</Label>
+                          <Textarea 
+                            id="market-conditions"
+                            placeholder="Overall market sentiment, volatility, trends, sector rotation..."
+                            className="mt-2 min-h-[200px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="trading-notes" className="text-base font-semibold">Live Trading Notes</Label>
+                          <Textarea 
+                            id="trading-notes"
+                            placeholder="Real-time observations, trade entries/exits, market reactions..."
+                            className="mt-2 min-h-[200px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="post-market-notes" className="text-base font-semibold">Post-Market Summary</Label>
+                          <Textarea 
+                            id="post-market-notes"
+                            placeholder="How the day played out, major moves, key observations..."
+                            className="mt-2 min-h-[200px] resize-none"
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="review" className="p-6 space-y-6 m-0">
+                      <div className="space-y-6">
+                        <div>
+                          <Label htmlFor="what-went-well" className="text-base font-semibold">What Went Well Today?</Label>
+                          <Textarea 
+                            id="what-went-well"
+                            placeholder="Successful trades, good decisions, discipline followed, emotions managed well..."
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="what-to-improve" className="text-base font-semibold">Areas for Improvement</Label>
+                          <Textarea 
+                            id="what-to-improve"
+                            placeholder="Mistakes made, rules broken, emotional reactions, missed opportunities..."
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="key-lessons" className="text-base font-semibold">Key Lessons Learned</Label>
+                          <Textarea 
+                            id="key-lessons"
+                            placeholder="Important insights, market behavior patterns, personal development..."
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="tomorrow-plan" className="text-base font-semibold">Tomorrow's Game Plan</Label>
+                          <Textarea 
+                            id="tomorrow-plan"
+                            placeholder="Strategy adjustments, watchlist, key levels, focus areas..."
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="strategy" className="p-6 space-y-6 m-0">
+                      <div className="space-y-6">
+                        <div>
+                          <Label htmlFor="rules-followed" className="text-base font-semibold">Trading Rules Followed</Label>
+                          <Textarea 
+                            id="rules-followed"
+                            placeholder="Which rules did I follow today? Risk management, position sizing, stop losses..."
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="rules-broken" className="text-base font-semibold">Rules Broken (if any)</Label>
+                          <Textarea 
+                            id="rules-broken"
+                            placeholder="Any deviations from my trading plan? Why did this happen?"
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="strategy-performance" className="text-base font-semibold">Strategy Performance</Label>
+                          <Textarea 
+                            id="strategy-performance"
+                            placeholder="How well did my main strategies work today? Any adjustments needed?"
+                            className="mt-2 min-h-[150px] resize-none"
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="notes" className="mt-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="premarket-notes">Pre-Market Notes</Label>
-                  <Textarea 
-                    id="premarket-notes"
-                    placeholder="Market outlook, planned trades, strategy for the day..."
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="trading-notes">Trading Notes</Label>
-                  <Textarea 
-                    id="trading-notes"
-                    placeholder="Real-time observations, trade decisions, market behavior..."
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="post-market-notes">Post-Market Notes</Label>
-                  <Textarea 
-                    id="post-market-notes"
-                    placeholder="Reflection on the day, lessons learned, what to improve..."
-                    rows={4}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="review" className="mt-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="what-went-well">What went well?</Label>
-                  <Textarea 
-                    id="what-went-well"
-                    placeholder="Successful trades, good decisions, strategy execution..."
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="what-to-improve">What could be improved?</Label>
-                  <Textarea 
-                    id="what-to-improve"
-                    placeholder="Mistakes made, areas for improvement, strategy adjustments..."
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="key-lessons">Key lessons learned</Label>
-                  <Textarea 
-                    id="key-lessons"
-                    placeholder="Important insights, market observations, personal development..."
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="tomorrow-plan">Plan for tomorrow</Label>
-                  <Textarea 
-                    id="tomorrow-plan"
-                    placeholder="Strategy adjustments, focus areas, specific goals..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
           
-          <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
+          {/* Footer */}
+          <div className="flex justify-end space-x-3 p-6 border-t bg-white">
             <Button variant="outline" onClick={() => setSelectedDay(null)}>
               Close
             </Button>
