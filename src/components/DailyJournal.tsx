@@ -31,7 +31,7 @@ interface DailyJournalProps {
 const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
   const { trades } = useTradeContext();
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
-  const [selectedMonth, setSelectedMonth] = useState('May 2025');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -49,30 +49,35 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
     }
   }, [selectedDate]);
 
-  // Generate journal entries from actual trades
+  // Generate journal entries from actual trades only
   const generateJournalEntries = () => {
     const tradesByDate = new Map<string, Trade[]>();
     
-    // Group trades by date
+    // Filter trades by current month and year
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Group trades by date for the current month
     trades.forEach(trade => {
       const date = new Date(trade.date);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric'
-      });
-      
-      if (!tradesByDate.has(formattedDate)) {
-        tradesByDate.set(formattedDate, []);
+      if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        const formattedDate = date.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric'
+        });
+        
+        if (!tradesByDate.has(formattedDate)) {
+          tradesByDate.set(formattedDate, []);
+        }
+        tradesByDate.get(formattedDate)!.push(trade);
       }
-      tradesByDate.get(formattedDate)!.push(trade);
     });
 
-    // Create journal entries
+    // Create journal entries only for dates with trades
     const entries: JournalEntry[] = [];
     
-    // Add entries for dates with trades
     tradesByDate.forEach((dayTrades, date) => {
       const tradeData = getTradeDataForDate(date);
       entries.push({
@@ -88,36 +93,6 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
         profitFactor: 0
       });
     });
-
-    // Add some mock entries for demo purposes if no trades exist
-    if (entries.length === 0) {
-      return [
-        {
-          date: 'Mon, May 05, 2025',
-          netPnL: 0,
-          totalTrades: 0,
-          winners: 0,
-          losers: 0,
-          grossPnL: 0,
-          commissions: 0,
-          winrate: 0,
-          volume: 0,
-          profitFactor: 0
-        },
-        {
-          date: 'Fri, Apr 04, 2025',
-          netPnL: 0,
-          totalTrades: 0,
-          winners: 0,
-          losers: 0,
-          grossPnL: 0,
-          commissions: 0,
-          winrate: 0,
-          volume: 0,
-          profitFactor: 0
-        }
-      ];
-    }
 
     return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
@@ -154,6 +129,27 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
     setExpandedEntries(newExpanded);
   };
 
+  const collapseAll = () => {
+    setExpandedEntries(new Set());
+  };
+
+  const expandAll = () => {
+    const allDates = new Set(generateJournalEntries().map(entry => entry.date));
+    setExpandedEntries(allDates);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+    // Clear expanded entries when changing months
+    setExpandedEntries(new Set());
+  };
+
   const openDay = (date: string) => {
     setSelectedDay(date);
   };
@@ -176,6 +172,10 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
   };
 
   const journalEntries = generateJournalEntries();
+  const currentMonthYear = currentDate.toLocaleDateString('en-US', { 
+    month: 'long', 
+    year: 'numeric' 
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -193,112 +193,140 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded">
+          <button 
+            onClick={collapseAll}
+            className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          >
             Collapse all
           </button>
-          <button className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded">
+          <button 
+            onClick={expandAll}
+            className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          >
             Expand all
           </button>
         </div>
         
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">{selectedMonth}</span>
+          <span className="text-sm text-gray-500">{currentMonthYear}</span>
           <div className="flex items-center space-x-2">
-            <button className="p-1 hover:bg-gray-100 rounded">←</button>
-            <button className="p-1 hover:bg-gray-100 rounded">→</button>
+            <button 
+              onClick={() => navigateMonth('prev')}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+            >
+              ←
+            </button>
+            <button 
+              onClick={() => navigateMonth('next')}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+            >
+              →
+            </button>
           </div>
         </div>
       </div>
 
       {/* Journal Entries */}
       <div className="space-y-4">
-        {journalEntries.map((entry) => {
-          const isExpanded = expandedEntries.has(entry.date);
-          const tradeData = getTradeDataForDate(entry.date);
-          
-          return (
-            <div key={entry.date} className="bg-white rounded-lg border border-gray-200">
-              {/* Entry Header */}
-              <div 
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => toggleExpanded(entry.date)}
-              >
-                <div className="flex items-center space-x-3">
-                  {isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  )}
-                  <div>
-                    <h3 className="font-medium text-gray-900">{entry.date}</h3>
-                    <p className="text-sm text-gray-500">Net P&L ${tradeData.netPnL.toFixed(2)}</p>
-                  </div>
-                </div>
-                
-                <button 
-                  className="flex items-center space-x-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDay(entry.date);
-                  }}
+        {journalEntries.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No trades for {currentMonthYear}</h3>
+            <p className="text-gray-500">Add some trades to see your daily journal entries</p>
+          </div>
+        ) : (
+          journalEntries.map((entry) => {
+            const isExpanded = expandedEntries.has(entry.date);
+            const tradeData = getTradeDataForDate(entry.date);
+            
+            return (
+              <div key={entry.date} className="bg-white rounded-lg border border-gray-200">
+                {/* Entry Header */}
+                <div 
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => toggleExpanded(entry.date)}
                 >
-                  <Calendar className="w-4 h-4" />
-                  <span>Open Day</span>
-                </button>
-              </div>
-
-              {/* Expanded Content */}
-              {isExpanded && (
-                <div className="border-t border-gray-200 p-4">
-                  <div className="text-center text-gray-500 mb-4">
-                    {tradeData.totalTrades === 0 ? 'No Closed NET P&L on this day' : `${tradeData.totalTrades} trades on this day`}
+                  <div className="flex items-center space-x-3">
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    )}
+                    <div>
+                      <h3 className="font-medium text-gray-900">{entry.date}</h3>
+                      <p className={`text-sm ${tradeData.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Net P&L ${tradeData.netPnL.toFixed(2)}
+                      </p>
+                    </div>
                   </div>
                   
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{tradeData.totalTrades}</div>
-                      <div className="text-sm text-gray-500">Total trades</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{tradeData.winners}</div>
-                      <div className="text-sm text-gray-500">Winners</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">${tradeData.netPnL.toFixed(2)}</div>
-                      <div className="text-sm text-gray-500">Gross P&L</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">$0.00</div>
-                      <div className="text-sm text-gray-500">Commissions</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">
-                        {tradeData.totalTrades === 0 ? '--' : `${tradeData.winrate.toFixed(1)}%`}
-                      </div>
-                      <div className="text-sm text-gray-500">Winrate</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">{tradeData.losers}</div>
-                      <div className="text-sm text-gray-500">Losers</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">0</div>
-                      <div className="text-sm text-gray-500">Volume</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-gray-900">--</div>
-                      <div className="text-sm text-gray-500">Profit factor</div>
-                    </div>
-                  </div>
+                  <button 
+                    className="flex items-center space-x-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDay(entry.date);
+                    }}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Open Day</span>
+                  </button>
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="border-t border-gray-200 p-4">
+                    <div className="text-center text-gray-500 mb-4">
+                      {tradeData.totalTrades === 0 ? 'No trades on this day' : `${tradeData.totalTrades} trades on this day`}
+                    </div>
+                    
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">{tradeData.totalTrades}</div>
+                        <div className="text-sm text-gray-500">Total trades</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">{tradeData.winners}</div>
+                        <div className="text-sm text-gray-500">Winners</div>
+                      </div>
+                      <div className="text-center">
+                        <div className={`text-lg font-semibold ${tradeData.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${tradeData.netPnL.toFixed(2)}
+                        </div>
+                        <div className="text-sm text-gray-500">Gross P&L</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">$0.00</div>
+                        <div className="text-sm text-gray-500">Commissions</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">
+                          {tradeData.totalTrades === 0 ? '--' : `${tradeData.winrate.toFixed(1)}%`}
+                        </div>
+                        <div className="text-sm text-gray-500">Winrate</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">{tradeData.losers}</div>
+                        <div className="text-sm text-gray-500">Losers</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">0</div>
+                        <div className="text-sm text-gray-500">Volume</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900">--</div>
+                        <div className="text-sm text-gray-500">Profit factor</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Enhanced Notebook-Style Modal */}
