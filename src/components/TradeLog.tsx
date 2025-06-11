@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import MetricCard from './MetricCard';
 import TradeDetailModal from './TradeDetailModal';
-import { Upload, Edit, Trash2 } from 'lucide-react';
+import TradeReviewModal from './TradeReviewModal';
+import { Upload, Edit, Trash2, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade } from '../types/trade';
 
@@ -11,6 +11,7 @@ const TradeLog: React.FC = () => {
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   
   const totalPnL = getTotalPnL();
   const winRate = getWinRate();
@@ -31,6 +32,16 @@ const TradeLog: React.FC = () => {
     setEditingTradeId(tradeId);
     // TODO: Implement edit modal/form
     console.log('Edit trade:', tradeId);
+  };
+
+  const handleReviewTrade = (trade: Trade) => {
+    setSelectedTrade(trade);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setIsReviewModalOpen(false);
+    setSelectedTrade(null);
   };
 
   const handleTradeClick = (trade: Trade) => {
@@ -191,6 +202,16 @@ const TradeLog: React.FC = () => {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
+                            handleReviewTrade(trade);
+                          }}
+                          className="text-purple-600 hover:text-purple-900 transition-colors"
+                          title="Review Trade"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleEditTrade(trade.id);
                           }}
                           className="text-blue-600 hover:text-blue-900 transition-colors"
@@ -220,6 +241,12 @@ const TradeLog: React.FC = () => {
         trade={selectedTrade}
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
+      />
+
+      <TradeReviewModal 
+        trade={selectedTrade}
+        isOpen={isReviewModalOpen}
+        onClose={handleCloseReviewModal}
       />
     </div>
   );

@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText, X } from 'lucide-react';
+import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText, X, BarChart3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTradeContext } from '../contexts/TradeContext';
+import TradeReviewModal from './TradeReviewModal';
+import { Trade } from '../types/trade';
 
 interface JournalEntry {
   date: string;
@@ -70,6 +71,8 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState('May 2025');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // Auto-open the selected date from calendar
   useEffect(() => {
@@ -118,6 +121,23 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
 
   const openDay = (date: string) => {
     setSelectedDay(date);
+  };
+
+  const handleTradeClick = (trade: Trade) => {
+    setSelectedTrade(trade);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setIsReviewModalOpen(false);
+    setSelectedTrade(null);
+  };
+
+  const getTradesForSelectedDay = () => {
+    if (!selectedDay) return [];
+    const date = new Date(selectedDay);
+    const isoDate = date.toISOString().split('T')[0];
+    return trades.filter(trade => trade.date === isoDate);
   };
 
   return (
@@ -299,27 +319,39 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
                     </Button>
                   </div>
                   
-                  {/* Sample Trade Items */}
+                  {/* Real Trade Items */}
                   <div className="space-y-2">
-                    <div className="p-3 bg-white rounded-lg border cursor-pointer hover:bg-gray-50">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm">AAPL</span>
-                        <span className="text-green-600 text-sm font-medium">+$124.50</span>
+                    {getTradesForSelectedDay().length > 0 ? (
+                      getTradesForSelectedDay().map((trade) => (
+                        <div 
+                          key={trade.id}
+                          className="p-3 bg-white rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleTradeClick(trade)}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-medium text-sm">{trade.symbol}</span>
+                            {trade.pnl !== undefined ? (
+                              <span className={`text-sm font-medium ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-sm">Open</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {trade.timeIn} - {trade.quantity} {trade.side === 'long' ? 'long' : 'short'}
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-gray-400">Click to review</span>
+                            <BarChart3 className="w-3 h-3 text-gray-400" />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 text-sm">
+                        No trades recorded for this day
                       </div>
-                      <div className="text-xs text-gray-500">09:30 AM - 100 shares</div>
-                    </div>
-                    
-                    <div className="p-3 bg-white rounded-lg border cursor-pointer hover:bg-gray-50">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm">TSLA</span>
-                        <span className="text-red-600 text-sm font-medium">-$45.20</span>
-                      </div>
-                      <div className="text-xs text-gray-500">10:15 AM - 50 shares</div>
-                    </div>
-                    
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      No trades recorded for this day
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -480,6 +512,12 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <TradeReviewModal 
+        trade={selectedTrade}
+        isOpen={isReviewModalOpen}
+        onClose={handleCloseReviewModal}
+      />
     </div>
   );
 };
