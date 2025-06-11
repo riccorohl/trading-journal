@@ -29,8 +29,16 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
 
   // Calculate daily P&L for the current month
   const getDailyPnL = (day: number) => {
+    // Create date string in YYYY-MM-DD format to match trade.date format
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayTrades = trades.filter(trade => trade.date === dateString && trade.status === 'closed');
+    console.log('Calendar checking date:', dateString);
+    
+    const dayTrades = trades.filter(trade => {
+      console.log('Trade date:', trade.date, 'Comparing with:', dateString);
+      return trade.date === dateString && trade.status === 'closed';
+    });
+    
+    console.log('Found trades for', dateString, ':', dayTrades.length);
     
     if (dayTrades.length === 0) return null;
     
@@ -68,7 +76,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
   };
 
   const handleDayClick = (day: number) => {
+    // Create date string in YYYY-MM-DD format
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    console.log('Calendar day clicked:', dateString);
     if (onDayClick) {
       onDayClick(dateString);
     }
