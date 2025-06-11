@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText, X, BarChart3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -27,45 +28,6 @@ interface DailyJournalProps {
   selectedDate?: string | null;
 }
 
-const mockEntries: JournalEntry[] = [
-  {
-    date: 'Mon, May 05, 2025',
-    netPnL: 0,
-    totalTrades: 0,
-    winners: 0,
-    losers: 0,
-    grossPnL: 0,
-    commissions: 0,
-    winrate: 0,
-    volume: 0,
-    profitFactor: 0
-  },
-  {
-    date: 'Fri, Apr 04, 2025',
-    netPnL: 0,
-    totalTrades: 0,
-    winners: 0,
-    losers: 0,
-    grossPnL: 0,
-    commissions: 0,
-    winrate: 0,
-    volume: 0,
-    profitFactor: 0
-  },
-  {
-    date: 'Fri, Aug 09, 2024',
-    netPnL: 0,
-    totalTrades: 0,
-    winners: 0,
-    losers: 0,
-    grossPnL: 0,
-    commissions: 0,
-    winrate: 0,
-    volume: 0,
-    profitFactor: 0
-  }
-];
-
 const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
   const { trades } = useTradeContext();
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
@@ -86,6 +48,79 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
       setSelectedDay(formattedDate);
     }
   }, [selectedDate]);
+
+  // Generate journal entries from actual trades
+  const generateJournalEntries = () => {
+    const tradesByDate = new Map<string, Trade[]>();
+    
+    // Group trades by date
+    trades.forEach(trade => {
+      const date = new Date(trade.date);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      
+      if (!tradesByDate.has(formattedDate)) {
+        tradesByDate.set(formattedDate, []);
+      }
+      tradesByDate.get(formattedDate)!.push(trade);
+    });
+
+    // Create journal entries
+    const entries: JournalEntry[] = [];
+    
+    // Add entries for dates with trades
+    tradesByDate.forEach((dayTrades, date) => {
+      const tradeData = getTradeDataForDate(date);
+      entries.push({
+        date,
+        netPnL: tradeData.netPnL,
+        totalTrades: tradeData.totalTrades,
+        winners: tradeData.winners,
+        losers: tradeData.losers,
+        grossPnL: tradeData.netPnL,
+        commissions: 0,
+        winrate: tradeData.winrate,
+        volume: 0,
+        profitFactor: 0
+      });
+    });
+
+    // Add some mock entries for demo purposes if no trades exist
+    if (entries.length === 0) {
+      return [
+        {
+          date: 'Mon, May 05, 2025',
+          netPnL: 0,
+          totalTrades: 0,
+          winners: 0,
+          losers: 0,
+          grossPnL: 0,
+          commissions: 0,
+          winrate: 0,
+          volume: 0,
+          profitFactor: 0
+        },
+        {
+          date: 'Fri, Apr 04, 2025',
+          netPnL: 0,
+          totalTrades: 0,
+          winners: 0,
+          losers: 0,
+          grossPnL: 0,
+          commissions: 0,
+          winrate: 0,
+          volume: 0,
+          profitFactor: 0
+        }
+      ];
+    }
+
+    return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
 
   const getTradeDataForDate = (dateString: string) => {
     // Convert display date to ISO format for comparison
@@ -140,6 +175,8 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
     return trades.filter(trade => trade.date === isoDate);
   };
 
+  const journalEntries = generateJournalEntries();
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -175,7 +212,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
 
       {/* Journal Entries */}
       <div className="space-y-4">
-        {mockEntries.map((entry) => {
+        {journalEntries.map((entry) => {
           const isExpanded = expandedEntries.has(entry.date);
           const tradeData = getTradeDataForDate(entry.date);
           
@@ -289,22 +326,33 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
               <div className="p-4 border-b bg-white">
                 <h3 className="font-semibold text-gray-900 mb-3">Daily Summary</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-2 bg-blue-50 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">$0.00</div>
-                    <div className="text-xs text-blue-600">Net P&L</div>
-                  </div>
-                  <div className="text-center p-2 bg-green-50 rounded-lg">
-                    <div className="text-lg font-bold text-green-600">0</div>
-                    <div className="text-xs text-green-600">Trades</div>
-                  </div>
-                  <div className="text-center p-2 bg-purple-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">--%</div>
-                    <div className="text-xs text-purple-600">Win Rate</div>
-                  </div>
-                  <div className="text-center p-2 bg-orange-50 rounded-lg">
-                    <div className="text-lg font-bold text-orange-600">0</div>
-                    <div className="text-xs text-orange-600">Events</div>
-                  </div>
+                  {(() => {
+                    const dayData = selectedDay ? getTradeDataForDate(selectedDay) : { netPnL: 0, totalTrades: 0, winrate: 0 };
+                    return (
+                      <>
+                        <div className="text-center p-2 bg-blue-50 rounded-lg">
+                          <div className={`text-lg font-bold ${dayData.netPnL >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                            ${dayData.netPnL.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-blue-600">Net P&L</div>
+                        </div>
+                        <div className="text-center p-2 bg-green-50 rounded-lg">
+                          <div className="text-lg font-bold text-green-600">{dayData.totalTrades}</div>
+                          <div className="text-xs text-green-600">Trades</div>
+                        </div>
+                        <div className="text-center p-2 bg-purple-50 rounded-lg">
+                          <div className="text-lg font-bold text-purple-600">
+                            {dayData.totalTrades === 0 ? '--' : `${dayData.winrate.toFixed(0)}`}%
+                          </div>
+                          <div className="text-xs text-purple-600">Win Rate</div>
+                        </div>
+                        <div className="text-center p-2 bg-orange-50 rounded-lg">
+                          <div className="text-lg font-bold text-orange-600">0</div>
+                          <div className="text-xs text-orange-600">Events</div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
