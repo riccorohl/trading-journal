@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, LineStyle, ColorType } from 'lightweight-charts';
 
 interface Trade {
   id: string;
@@ -28,159 +27,227 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
   trade, 
   className = "" 
 }) => {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLibraryAvailable, setIsLibraryAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate simple sample data around the trade
-  const generateSampleData = () => {
-    const data = [];
-    const entryTime = new Date(`${trade.date}T${trade.timeIn || '09:30'}`);
-    
-    // Generate 24 hours of data around the trade
-    for (let i = -12; i <= 12; i++) {
-      const time = new Date(entryTime.getTime() + i * 60 * 60 * 1000);
-      const basePrice = trade.entryPrice;
-      const randomChange = (Math.random() - 0.5) * 0.02; // 2% volatility
-      
-      const open = basePrice * (1 + randomChange);
-      const close = open * (1 + (Math.random() - 0.5) * 0.01);
-      const high = Math.max(open, close) * (1 + Math.random() * 0.005);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.005);
-      
-      data.push({
-        time: Math.floor(time.getTime() / 1000),
-        open: parseFloat(open.toFixed(2)),
-        high: parseFloat(high.toFixed(2)),
-        low: parseFloat(low.toFixed(2)),
-        close: parseFloat(close.toFixed(2))
-      });
-    }
-    
-    return data.sort((a, b) => a.time - b.time);
-  };
+  useEffect(() => {
+    const checkLibrary = async () => {
+      try {
+        await import('lightweight-charts');
+        setIsLibraryAvailable(true);
+      } catch (err) {
+        console.error('Failed to load lightweight-charts:', err);
+        setError('lightweight-charts library not available. Run: npm install lightweight-charts');
+      }
+    };
+
+    checkLibrary();
+  }, []);
+
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center h-96 bg-gray-100 rounded-lg ${className}`}>
+        <div className="text-center p-4">
+          <div className="text-red-500 text-lg font-medium mb-2">Chart Library Error</div>
+          <div className="text-gray-600 text-sm">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLibraryAvailable) {
+    return (
+      <div className={`flex items-center justify-center h-96 bg-gray-50 rounded-lg ${className}`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="text-gray-600 mt-4">Loading chart library...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return <ActualChart trade={trade} className={className} />;
+};
+
+// Separate component that only renders when library is confirmed available
+const ActualChart: React.FC<TradingViewLightweightChartProps> = ({ trade, className = "" }) => {
+  const [chartContainer, setChartContainer] = useState<HTMLDivElement | null>(null);
+  const chartRef = useRef<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    mountedRef.current = true;
+    console.log('ActualChart mounted, starting initialization...');
 
-    try {
-      // Clean up previous chart
-      if (chartRef.current) {
-        chartRef.current.remove();
+    const initChart = async () => {
+      // Wait for the next frame to ensure DOM is ready
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
+      if (!mountedRef.current) {
+        console.log('Component unmounted before chart creation');
+        return;
       }
 
-      // Create new chart
-      const chart = createChart(chartContainerRef.current, {
-        width: chartContainerRef.current.clientWidth,
-        height: 400,
-        layout: {
-          background: { type: ColorType.Solid, color: '#ffffff' },
-          textColor: '#333333',
-        },
-        grid: {
-          vertLines: { color: '#e1e5e9' },
-          horzLines: { color: '#e1e5e9' },
-        },
-        rightPriceScale: {
-          borderColor: '#cccccc',
-        },
-        timeScale: {
-          borderColor: '#cccccc',
-          timeVisible: true,
-        },
+      if (!chartContainer) {
+        console.log('Container ref is null');
+        setError('Chart container not available');
+        return;
+      }
+
+      console.log('Container found, creating chart...');
+      console.log('Container details:', {
+        width: chartContainer.clientWidth,
+        height: chartContainer.clientHeight,
+        visible: chartContainer.offsetParent !== null
       });
 
-      chartRef.current = chart;
+      try {
+        const charts = await import('lightweight-charts');
+        
+        // Clean up previous chart
+        if (chartRef.current) {
+          chartRef.current.remove();
+        }
 
-      // Create candlestick series
-      const candlestickSeries = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-      });
+        // Force container size if needed
+        const containerWidth = Math.max(chartContainer.clientWidth, 600);
 
-      // Generate and set data
-      const sampleData = generateSampleData();
-      candlestickSeries.setData(sampleData);
+        // Generate sample data
+        const generateSampleData = () => {
+          const data = [];
+          const entryTime = new Date(`${trade.date}T${trade.timeIn || '09:30'}`);
+          
+          for (let i = -12; i <= 12; i++) {
+            const time = new Date(entryTime.getTime() + i * 60 * 60 * 1000);
+            const basePrice = trade.entryPrice;
+            const randomChange = (Math.random() - 0.5) * 0.02;
+            
+            const open = basePrice * (1 + randomChange);
+            const close = open * (1 + (Math.random() - 0.5) * 0.01);
+            const high = Math.max(open, close) * (1 + Math.random() * 0.005);
+            const low = Math.min(open, close) * (1 - Math.random() * 0.005);
+            
+            data.push({
+              time: Math.floor(time.getTime() / 1000),
+              open: parseFloat(open.toFixed(2)),
+              high: parseFloat(high.toFixed(2)),
+              low: parseFloat(low.toFixed(2)),
+              close: parseFloat(close.toFixed(2))
+            });
+          }
+          
+          return data.sort((a, b) => a.time - b.time);
+        };
 
-      // Add entry price line
-      candlestickSeries.createPriceLine({
-        price: trade.entryPrice,
-        color: '#2196F3',
-        lineWidth: 2,
-        lineStyle: LineStyle.Solid,
-        axisLabelVisible: true,
-        title: `Entry: $${trade.entryPrice}`,
-      });
+        // Create chart
+        const chart = charts.createChart(chartContainer, {
+          width: containerWidth,
+          height: 400,
+          layout: {
+            background: { type: charts.ColorType.Solid, color: '#ffffff' },
+            textColor: '#333333',
+          },
+          grid: {
+            vertLines: { color: '#e1e5e9' },
+            horzLines: { color: '#e1e5e9' },
+          },
+          rightPriceScale: {
+            borderColor: '#cccccc',
+          },
+          timeScale: {
+            borderColor: '#cccccc',
+            timeVisible: true,
+          },
+        });
 
-      // Add exit price line if available
-      if (trade.exitPrice) {
+        if (!mountedRef.current) return;
+
+        console.log('Chart created successfully');
+        chartRef.current = chart;
+
+        // Create candlestick series
+        const candlestickSeries = chart.addCandlestickSeries({
+          upColor: '#26a69a',
+          downColor: '#ef5350',
+          borderVisible: false,
+          wickUpColor: '#26a69a',
+          wickDownColor: '#ef5350',
+        });
+
+        // Set data
+        const sampleData = generateSampleData();
+        candlestickSeries.setData(sampleData);
+
+        // Add price lines
         candlestickSeries.createPriceLine({
-          price: trade.exitPrice,
-          color: (trade.pnl || 0) >= 0 ? '#4CAF50' : '#F44336',
+          price: trade.entryPrice,
+          color: '#2196F3',
           lineWidth: 2,
-          lineStyle: LineStyle.Solid,
+          lineStyle: charts.LineStyle.Solid,
           axisLabelVisible: true,
-          title: `Exit: $${trade.exitPrice}`,
+          title: `Entry: $${trade.entryPrice}`,
         });
-      }
 
-      // Add stop loss line if available
-      if (trade.stopLoss) {
-        candlestickSeries.createPriceLine({
-          price: trade.stopLoss,
-          color: '#F44336',
-          lineWidth: 1,
-          lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: `Stop: $${trade.stopLoss}`,
-        });
-      }
-
-      // Add take profit line if available
-      if (trade.takeProfit) {
-        candlestickSeries.createPriceLine({
-          price: trade.takeProfit,
-          color: '#4CAF50',
-          lineWidth: 1,
-          lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: `Target: $${trade.takeProfit}`,
-        });
-      }
-
-      // Fit content
-      chart.timeScale().fitContent();
-
-      setIsLoading(false);
-      setError(null);
-
-      // Handle resize
-      const handleResize = () => {
-        if (chartContainerRef.current && chart) {
-          chart.applyOptions({
-            width: chartContainerRef.current.clientWidth,
+        if (trade.exitPrice) {
+          candlestickSeries.createPriceLine({
+            price: trade.exitPrice,
+            color: (trade.pnl || 0) >= 0 ? '#4CAF50' : '#F44336',
+            lineWidth: 2,
+            lineStyle: charts.LineStyle.Solid,
+            axisLabelVisible: true,
+            title: `Exit: $${trade.exitPrice}`,
           });
         }
-      };
 
-      window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (chart) {
-          chart.remove();
+        if (trade.stopLoss) {
+          candlestickSeries.createPriceLine({
+            price: trade.stopLoss,
+            color: '#F44336',
+            lineWidth: 1,
+            lineStyle: charts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `Stop: $${trade.stopLoss}`,
+          });
         }
-      };
 
-    } catch (err) {
-      console.error('Chart creation error:', err);
-      setError(`Failed to create chart: ${err}`);
-      setIsLoading(false);
-    }
+        if (trade.takeProfit) {
+          candlestickSeries.createPriceLine({
+            price: trade.takeProfit,
+            color: '#4CAF50',
+            lineWidth: 1,
+            lineStyle: charts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `Target: $${trade.takeProfit}`,
+          });
+        }
+
+        // Fit content
+        chart.timeScale().fitContent();
+
+        console.log('Chart setup completed successfully');
+        setIsLoading(false);
+        setError(null);
+
+      } catch (err) {
+        console.error('Chart creation failed:', err);
+        setError(`Chart creation failed: ${err}`);
+        setIsLoading(false);
+      }
+    };
+
+    // Start initialization with a small delay
+    const timer = setTimeout(initChart, 100);
+
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
+    };
   }, [trade]);
 
   if (error) {
@@ -189,9 +256,6 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
         <div className="text-center p-4">
           <div className="text-red-500 text-lg font-medium mb-2">Chart Error</div>
           <div className="text-gray-600 text-sm">{error}</div>
-          <div className="text-gray-500 text-xs mt-2">
-            Make sure 'lightweight-charts' is installed: npm install lightweight-charts
-          </div>
         </div>
       </div>
     );
@@ -202,7 +266,7 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
       <div className={`flex items-center justify-center h-96 bg-gray-50 rounded-lg ${className}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <div className="text-gray-600 mt-4">Loading chart...</div>
+          <div className="text-gray-600 mt-4">Creating chart...</div>
         </div>
       </div>
     );
@@ -210,7 +274,16 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
 
   return (
     <div className={`relative ${className}`}>
-      <div ref={chartContainerRef} className="w-full h-96" />
+      <div 
+        ref={setChartContainer}
+        className="w-full h-96 bg-white rounded-lg border"
+        style={{ 
+          minWidth: '600px', 
+          minHeight: '400px',
+          display: 'block',
+          position: 'relative'
+        }}
+      />
       
       {/* Chart Info */}
       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
