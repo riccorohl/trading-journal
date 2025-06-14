@@ -11,6 +11,7 @@ import { Label } from './ui/label';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade, TradeFormData } from '../types/trade';
 import { toast } from '../hooks/use-toast';
+import { getTodayDate } from '../lib/dateUtils';
 
 const tradeSchema = z.object({
   symbol: z.string().min(1, 'Symbol is required'),
@@ -46,7 +47,7 @@ const AddTrade: React.FC<AddTradeProps> = ({ onClose }) => {
     resolver: zodResolver(tradeSchema),
     defaultValues: {
       symbol: '',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayDate(),
       timeIn: '',
       timeOut: '',
       side: 'long',
@@ -90,43 +91,58 @@ const AddTrade: React.FC<AddTradeProps> = ({ onClose }) => {
     }
   }, [watchedValues]);
 
-  const onSubmit = (data: TradeFormData) => {
-    const trade: Trade = {
-      id: Date.now().toString(),
-      symbol: data.symbol.toUpperCase(),
-      date: data.date,
-      timeIn: data.timeIn,
-      timeOut: data.timeOut || undefined,
-      side: data.side,
-      entryPrice: parseFloat(data.entryPrice),
-      exitPrice: data.exitPrice ? parseFloat(data.exitPrice) : undefined,
-      quantity: parseFloat(data.quantity),
-      commission: parseFloat(data.commission || '0'),
-      stopLoss: data.stopLoss ? parseFloat(data.stopLoss) : undefined,
-      takeProfit: data.takeProfit ? parseFloat(data.takeProfit) : undefined,
-      strategy: data.strategy || undefined,
-      marketConditions: data.marketConditions || undefined,
-      timeframe: data.timeframe || undefined,
-      confidence: data.confidence ? parseFloat(data.confidence) : undefined,
-      emotions: data.emotions || undefined,
-      notes: data.notes || undefined,
-      riskAmount: data.riskAmount ? parseFloat(data.riskAmount) : undefined,
-      status: data.exitPrice ? 'closed' : 'open',
-      pnl: calculatedPnL || undefined,
-    };
-
-    // Calculate R-multiple if risk amount is provided
-    if (trade.riskAmount && trade.pnl) {
-      trade.rMultiple = trade.pnl / trade.riskAmount;
-    }
-
-    addTrade(trade);
-    toast({
-      title: "Trade Added",
-      description: `Successfully added ${trade.symbol} trade.`,
-    });
-    onClose();
-  };
+  const onSubmit = async (data: TradeFormData) => {
+            try {
+              const trade: Trade = {
+                id: Date.now().toString(),
+                symbol: data.symbol.toUpperCase(),
+                date: data.date,
+                timeIn: data.timeIn,
+                timeOut: data.timeOut || undefined,
+                side: data.side,
+                entryPrice: parseFloat(data.entryPrice),
+                exitPrice: data.exitPrice ? parseFloat(data.exitPrice) : undefined,
+                quantity: parseFloat(data.quantity),
+                commission: parseFloat(data.commission || '0'),
+                stopLoss: data.stopLoss ? parseFloat(data.stopLoss) : undefined,
+                takeProfit: data.takeProfit ? parseFloat(data.takeProfit) : undefined,
+                strategy: data.strategy || undefined,
+                marketConditions: data.marketConditions || undefined,
+                timeframe: data.timeframe || undefined,
+                confidence: data.confidence ? parseFloat(data.confidence) : undefined,
+                emotions: data.emotions || undefined,
+                notes: data.notes || undefined,
+                riskAmount: data.riskAmount ? parseFloat(data.riskAmount) : undefined,
+                status: data.exitPrice ? 'closed' : 'open',
+                pnl: calculatedPnL || undefined,
+              };
+        
+              // Calculate R-multiple if risk amount is provided
+              if (trade.riskAmount && trade.pnl) {
+                trade.rMultiple = trade.pnl / trade.riskAmount;
+              }
+        
+              console.log('Attempting to add trade:', trade);
+              await addTrade(trade);
+              toast({
+                title: "Trade Added",
+                description: `Successfully added ${trade.symbol} trade.`,
+              });
+              onClose();
+            } catch (error) {
+              console.error('Error adding trade:', error);
+              console.error('Error details:', {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                error: error
+              });
+              toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to add trade. Please try again.",
+                variant: "destructive",
+              });
+            }
+          };
+;
 
   const tabs = [
     { id: 'basic', label: 'Basic Info' },

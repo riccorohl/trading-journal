@@ -1,12 +1,15 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Trade } from '../types/trade';
+import { tradeService } from '../lib/firebaseService';
+import { DataMigrationService } from '../lib/dataMigration';
+import { useAuth } from './AuthContext';
 
 interface TradeContextType {
   trades: Trade[];
-  addTrade: (trade: Trade) => void;
-  updateTrade: (id: string, trade: Partial<Trade>) => void;
-  deleteTrade: (id: string) => void;
+  loading: boolean;
+  addTrade: (trade: Trade) => Promise<void>;
+  updateTrade: (id: string, trade: Partial<Trade>) => Promise<void>;
+  deleteTrade: (id: string) => Promise<void>;
   getTradesByDate: (date: string) => Trade[];
   getTotalPnL: () => number;
   getWinRate: () => number;
@@ -25,32 +28,90 @@ export const useTradeContext = () => {
 
 export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Load trades from localStorage on mount
+  // Load trades from Firebase when user changes
   useEffect(() => {
-    const savedTrades = localStorage.getItem('chartJournalTrades');
-    if (savedTrades) {
-      setTrades(JSON.parse(savedTrades));
+    if (!user) {
+      setTrades([]);
+      setLoading(false);
+      return;
     }
-  }, []);
 
-  // Save trades to localStorage whenever trades change
+    setLoading(true);
+    
+    // Subscribe to real-time updates
+    const unsubscribe = tradeService.subscribeToTrades(user.uid, (updatedTrades) => {
+      setTrades(updatedTrades);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  // Migrate existing localStorage data to Firebase (one-time operation)
   useEffect(() => {
-    localStorage.setItem('chartJournalTrades', JSON.stringify(trades));
-  }, [trades]);
+    const migrateLocalStorageData = async () => {
+      if (!user) return;
 
-  const addTrade = (trade: Trade) => {
-    setTrades(prev => [...prev, trade]);
+      // Use the enhanced migration service
+      try {
+        const result = await DataMigrationService.migrateToFirebase(user.uid);
+        if (result.success) {
+          console.log('Migration completed:', result.migrated);
+        } else {
+          console.warn('Migration completed with errors:', result.errors);
+        }
+      } catch (error) {
+        console.error('Error during migration:', error);
+      }
+    };
+
+    migrateLocalStorageData();
+  }, [user]);
+
+  const addTrade = async (trade: Trade) => {
+    if (!user) {
+      throw new Error('User must be authenticated to add trades');
+    }
+
+    try {
+      const { id, ...tradeData } = trade;
+      await tradeService.addTrade(user.uid, tradeData);
+      // The real-time subscription will update the trades state
+    } catch (error) {
+      console.error('Error adding trade:', error);
+      throw error;
+    }
   };
 
-  const updateTrade = (id: string, updatedTrade: Partial<Trade>) => {
-    setTrades(prev => prev.map(trade => 
-      trade.id === id ? { ...trade, ...updatedTrade } : trade
-    ));
+  const updateTrade = async (id: string, updatedTrade: Partial<Trade>) => {
+    if (!user) {
+      throw new Error('User must be authenticated to update trades');
+    }
+
+    try {
+      await tradeService.updateTrade(user.uid, id, updatedTrade);
+      // The real-time subscription will update the trades state
+    } catch (error) {
+      console.error('Error updating trade:', error);
+      throw error;
+    }
   };
 
-  const deleteTrade = (id: string) => {
-    setTrades(prev => prev.filter(trade => trade.id !== id));
+  const deleteTrade = async (id: string) => {
+    if (!user) {
+      throw new Error('User must be authenticated to delete trades');
+    }
+
+    try {
+      await tradeService.deleteTrade(user.uid, id);
+      // The real-time subscription will update the trades state
+    } catch (error) {
+      console.error('Error deleting trade:', error);
+      throw error;
+    }
   };
 
   const getTradesByDate = (date: string) => {
@@ -82,6 +143,7 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <TradeContext.Provider value={{
       trades,
+      loading,
       addTrade,
       updateTrade,
       deleteTrade,

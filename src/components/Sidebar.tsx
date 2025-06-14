@@ -6,9 +6,14 @@ import {
   BarChart3,
   Play,
   Plus,
-  Upload
+  Upload,
+  LogOut,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 interface SidebarProps {
   currentPage: string;
@@ -26,6 +31,16 @@ const menuItems = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade, onImportTrades }) => {
+  const { user, userProfile, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col">
       {/* Logo */}
@@ -42,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade
       <div className="p-4 space-y-2">
         <button 
           onClick={onAddTrade}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+          className="w-full bg-custom-purple hover:bg-custom-purple/90 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span className="font-medium">Add Trade</span>
@@ -50,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade
         
         <button 
           onClick={onImportTrades}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+          className="w-full bg-custom-blue hover:bg-custom-blue/90 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
         >
           <Upload className="w-4 h-4" />
           <span className="font-medium">Import Trades</span>
@@ -74,13 +89,40 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade
             >
               <Icon className="w-5 h-5" />
               <span className="font-medium">{item.label}</span>
-              {item.id === 'reports' && (
-                <span className="ml-auto bg-purple-600 text-xs px-2 py-1 rounded">NEW</span>
-              )}
             </button>
           );
         })}
       </nav>
+
+      {/* User Profile Section */}
+      <div className="border-t border-slate-700 p-4">
+        <div className="flex items-center space-x-3 mb-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
+            <AvatarFallback className="bg-purple-600">
+              {user?.displayName?.charAt(0) || user?.email?.charAt(0) || <User className="h-4 w-4" />}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">
+              {user?.displayName || 'User'}
+            </p>
+            <p className="text-xs text-slate-400 truncate">
+              {user?.email}
+            </p>
+          </div>
+        </div>
+        
+        <Button
+          onClick={handleSignOut}
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
     </div>
   );
 };

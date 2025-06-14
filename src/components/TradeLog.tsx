@@ -5,6 +5,7 @@ import TradeReviewModal from './TradeReviewModal';
 import { Upload, Edit, Trash2, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade } from '../types/trade';
+import { formatDateForTable } from '../lib/dateUtils';
 
 const TradeLog: React.FC = () => {
   const { trades, deleteTrade, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
@@ -159,7 +160,7 @@ const TradeLog: React.FC = () => {
                       {trade.symbol}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(trade.date).toLocaleDateString()}
+                      {formatDateForTable(trade.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

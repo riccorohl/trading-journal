@@ -1,162 +1,104 @@
-
 import React from 'react';
-import MetricCard from './MetricCard';
-import CalendarWidget from './CalendarWidget';
-import { TrendingUp, Calendar, DollarSign, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
+import { formatDateForTable } from '../lib/dateUtils';
 
 interface DashboardProps {
   onNavigateToJournal?: (date: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
-  const { getTotalPnL, getWinRate, getProfitFactor, trades } = useTradeContext();
-  
-  const totalPnL = getTotalPnL();
-  const winRate = getWinRate();
-  const profitFactor = getProfitFactor();
-  const closedTrades = trades.filter(trade => trade.status === 'closed');
-  const winners = closedTrades.filter(trade => (trade.pnl || 0) > 0);
-  const losers = closedTrades.filter(trade => (trade.pnl || 0) < 0);
-  const avgWin = winners.length > 0 ? winners.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / winners.length : 0;
-  const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losers.length) : 0;
-  const avgTradePnL = closedTrades.length > 0 ? closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / closedTrades.length : 0;
+  const { user } = useAuth();
+  const { trades, loading } = useTradeContext();
 
-  const handleDayClick = (date: string) => {
-    if (onNavigateToJournal) {
-      onNavigateToJournal(date);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" text="Loading dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="flex items-center space-x-4">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <Calendar className="w-4 h-4" />
-            <span>Start my day</span>
-          </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome to Zella Trade Scribe</h1>
+          <p className="text-gray-600 mt-2">
+            Hello {user?.displayName || user?.email}! Your trading journal is ready.
+          </p>
         </div>
       </div>
 
-      {/* Top Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <MetricCard 
-          title="Net P&L" 
-          value={totalPnL === 0 ? "--" : `$${totalPnL.toFixed(2)}`}
-          subtitle={`${trades.length} trades taken`}
-          color={totalPnL >= 0 ? "green" : "red"}
-        />
-        <MetricCard 
-          title="Trade win %" 
-          value={closedTrades.length === 0 ? "--" : `${winRate.toFixed(1)}%`}
-          color={winRate >= 50 ? "green" : "red"}
-          showProgress={true}
-          progressValue={Math.round(winRate)}
-        />
-        <MetricCard 
-          title="Profit factor" 
-          value={closedTrades.length === 0 ? "--" : profitFactor.toFixed(2)}
-          color={profitFactor >= 1 ? "green" : "red"}
-          showProgress={true}
-          progressValue={Math.min(Math.round(profitFactor * 50), 100)}
-        />
-        <MetricCard 
-          title="Day win %" 
-          value="--" 
-          color="red"
-          showProgress={true}
-          progressValue={0}
-        />
-        <MetricCard 
-          title="Avg win/loss trade" 
-          value={winners.length === 0 ? "--" : `$${avgWin.toFixed(2)}`}
-          subtitle={losers.length === 0 ? "--" : `$${avgLoss.toFixed(2)}`}
-          color="green"
-        />
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Total Trades</h3>
+          <p className="text-2xl font-bold text-gray-900">{trades.length}</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Open Trades</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            {trades.filter(trade => trade.status === 'open').length}
+          </p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Closed Trades</h3>
+          <p className="text-2xl font-bold text-green-600">
+            {trades.filter(trade => trade.status === 'closed').length}
+          </p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Total P&L</h3>
+          <p className="text-2xl font-bold text-gray-900">
+            ${trades.reduce((total, trade) => total + (trade.pnl || 0), 0).toFixed(2)}
+          </p>
+        </div>
       </div>
 
-      {/* Calendar Widget */}
-      <CalendarWidget onDayClick={handleDayClick} />
+      {/* Getting Started */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Getting Started</h2>
+        <div className="space-y-3">
+          <p className="text-gray-600">
+            🎉 <strong>Success!</strong> Firebase authentication is working and you're logged in.
+          </p>
+          <p className="text-gray-600">
+            📊 Use the sidebar to navigate between different sections of your trading journal.
+          </p>
+          <p className="text-gray-600">
+            ➕ Click "Add Trade" to start logging your trades.
+          </p>
+          <p className="text-gray-600">
+            📈 Your data will automatically sync across all your devices.
+          </p>
+        </div>
+      </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Average Trade P&L */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600 flex items-center">
-              Average Trade P&L
-              <span className="ml-1 text-gray-400">ⓘ</span>
-            </h3>
-          </div>
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <div className="w-32 h-32 border-4 border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-16 h-16 text-gray-400" />
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold mb-2 ${avgTradePnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {closedTrades.length === 0 ? "--" : `$${avgTradePnL.toFixed(2)}`}
+      {/* Recent Trades */}
+      {trades.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Trades</h2>
+          <div className="space-y-2">
+            {trades.slice(0, 5).map((trade) => (
+              <div key={trade.id} className="flex justify-between items-center py-2 border-b">
+                <div>
+                  <span className="font-medium">{trade.symbol}</span>
+                  <span className="text-gray-500 ml-2">{formatDateForTable(trade.date)}</span>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {closedTrades.length === 0 
-                    ? "Available once there is at least 1 closed trade." 
-                    : `Based on ${closedTrades.length} closed trade${closedTrades.length === 1 ? '' : 's'}`
-                  }
-                </p>
+                <div className={`font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
-
-        {/* Daily Net Cumulative P&L */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600 flex items-center">
-              Daily net cumulative P&L
-              <span className="ml-1 text-gray-400">ⓘ</span>
-            </h3>
-          </div>
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <div className="w-24 h-24 text-gray-300 mx-auto mb-4">
-                <TrendingUp className="w-full h-full" />
-              </div>
-              <p className="text-sm text-gray-500">
-                {trades.length === 0 
-                  ? "No daily net cumulative P&L to show here"
-                  : "Chart visualization coming soon"
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Net Daily P&L */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600 flex items-center">
-              Net daily P&L
-              <span className="ml-1 text-gray-400">ⓘ</span>
-            </h3>
-          </div>
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <div className="w-24 h-24 text-gray-300 mx-auto mb-4">
-                <DollarSign className="w-full h-full" />
-              </div>
-              <p className="text-sm text-gray-500">
-                {trades.length === 0 
-                  ? "No net daily P&L to show here"
-                  : "Chart visualization coming soon"
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

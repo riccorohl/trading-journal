@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Calendar, Plus, Clock, DollarSign, TrendingUp, FileText, X, BarChart3 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogContentNoClose } from '@/components/ui/dialog-no-close';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -366,7 +367,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
 
       {/* Enhanced Notebook-Style Modal */}
       <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+        <DialogContentNoClose className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
           {/* Custom Header */}
           <div className="flex items-center justify-between p-6 border-b bg-white">
             <div className="flex items-center space-x-3">
@@ -621,7 +622,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
               Save Changes
             </Button>
           </div>
-        </DialogContent>
+        </DialogContentNoClose>
       </Dialog>
 
       <TradeReviewModal 

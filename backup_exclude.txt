@@ -1,0 +1,10 @@
+node_modules\
+.git\
+dist\
+build\
+.vscode\
+.idea\
+*.log
+.env
+Thumbs.db
+.DS_Store

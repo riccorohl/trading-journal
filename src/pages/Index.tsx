@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
@@ -7,7 +6,6 @@ import TradeLog from '../components/TradeLog';
 import Playbooks from '../components/Playbooks';
 import AddTrade from '../components/AddTrade';
 import ImportTrades from '../components/ImportTrades';
-import { TradeProvider } from '../contexts/TradeContext';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -43,34 +41,32 @@ const Index = () => {
   };
 
   return (
-    <TradeProvider>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar 
-          currentPage={currentPage} 
-          onPageChange={(page) => {
-            setCurrentPage(page);
-            if (page !== 'journal') {
-              setSelectedJournalDate(null);
-            }
-          }}
-          onAddTrade={() => setShowAddTrade(true)}
-          onImportTrades={() => setShowImportTrades(true)}
-        />
-        <div className="flex-1 overflow-hidden">
-          <div className="h-screen overflow-y-auto">
-            {renderCurrentPage()}
-          </div>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar 
+        currentPage={currentPage} 
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          if (page !== 'journal') {
+            setSelectedJournalDate(null);
+          }
+        }}
+        onAddTrade={() => setShowAddTrade(true)}
+        onImportTrades={() => setShowImportTrades(true)}
+      />
+      <div className="flex-1 overflow-hidden">
+        <div className="h-screen overflow-y-auto">
+          {renderCurrentPage()}
         </div>
-        
-        {showAddTrade && (
-          <AddTrade onClose={() => setShowAddTrade(false)} />
-        )}
-        
-        {showImportTrades && (
-          <ImportTrades onClose={() => setShowImportTrades(false)} />
-        )}
       </div>
-    </TradeProvider>
+      
+      {showAddTrade && (
+        <AddTrade onClose={() => setShowAddTrade(false)} />
+      )}
+      
+      {showImportTrades && (
+        <ImportTrades onClose={() => setShowImportTrades(false)} />
+      )}
+    </div>
   );
 };
 
