@@ -1,71 +1,80 @@
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
-import DailyJournal from '../components/DailyJournal';
-import TradeLog from '../components/TradeLog';
-import Playbooks from '../components/Playbooks';
 import AddTrade from '../components/AddTrade';
+import TradeLog from '../components/TradeLog';
+import DailyJournal from '../components/DailyJournal';
+import Playbooks from '../components/Playbooks';
 import ImportTrades from '../components/ImportTrades';
 
-const Index = () => {
+const Index: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showAddTrade, setShowAddTrade] = useState(false);
   const [showImportTrades, setShowImportTrades] = useState(false);
-  const [selectedJournalDate, setSelectedJournalDate] = useState<string | null>(null);
 
-  const handleNavigateToJournal = (date: string) => {
-    setSelectedJournalDate(date);
-    setCurrentPage('journal');
+  const handlePageChange = (page: string) => {
+    setCurrentPage(page);
+    setShowAddTrade(false);
+    setShowImportTrades(false);
+  };
+
+  const handleAddTrade = () => {
+    setShowAddTrade(true);
+    setShowImportTrades(false);
+  };
+
+  const handleImportTrades = () => {
+    setShowImportTrades(true);
+    setShowAddTrade(false);
+  };
+
+  const handleCloseAddTrade = () => {
+    setShowAddTrade(false);
+    setCurrentPage('dashboard');
+  };
+
+  const handleCloseImportTrades = () => {
+    setShowImportTrades(false);
+    setCurrentPage('dashboard');
   };
 
   const renderCurrentPage = () => {
+    if (showAddTrade) {
+      return <AddTrade onClose={handleCloseAddTrade} />;
+    }
+    
+    if (showImportTrades) {
+      return <ImportTrades onClose={handleCloseImportTrades} />;
+    }
+
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigateToJournal={handleNavigateToJournal} />;
-      case 'journal':
-        return <DailyJournal selectedDate={selectedJournalDate} />;
+        return <Dashboard />;
       case 'trades':
         return <TradeLog />;
+      case 'journal':
+        return <DailyJournal />;
       case 'playbooks':
         return <Playbooks />;
       default:
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
-            </h1>
-            <p className="text-gray-600">This page is under construction.</p>
-          </div>
-        );
+        return <Dashboard />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-100">
       <Sidebar 
-        currentPage={currentPage} 
-        onPageChange={(page) => {
-          setCurrentPage(page);
-          if (page !== 'journal') {
-            setSelectedJournalDate(null);
-          }
-        }}
-        onAddTrade={() => setShowAddTrade(true)}
-        onImportTrades={() => setShowImportTrades(true)}
+        currentPage={showAddTrade ? 'add-trade' : showImportTrades ? 'import-trades' : currentPage} 
+        onPageChange={handlePageChange}
+        onAddTrade={handleAddTrade}
+        onImportTrades={handleImportTrades}
       />
-      <div className="flex-1 overflow-hidden">
-        <div className="h-screen overflow-y-auto">
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {renderCurrentPage()}
-        </div>
+        </main>
       </div>
-      
-      {showAddTrade && (
-        <AddTrade onClose={() => setShowAddTrade(false)} />
-      )}
-      
-      {showImportTrades && (
-        <ImportTrades onClose={() => setShowImportTrades(false)} />
-      )}
     </div>
   );
 };

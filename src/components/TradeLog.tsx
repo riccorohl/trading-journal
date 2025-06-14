@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MetricCard from './MetricCard';
 import TradeDetailModal from './TradeDetailModal';
 import TradeReviewModal from './TradeReviewModal';
+import EditTradeModal from './EditTradeModal';
 import { Upload, Edit, Trash2, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade } from '../types/trade';
@@ -31,8 +32,6 @@ const TradeLog: React.FC = () => {
 
   const handleEditTrade = (tradeId: string) => {
     setEditingTradeId(tradeId);
-    // TODO: Implement edit modal/form
-    console.log('Edit trade:', tradeId);
   };
 
   const handleReviewTrade = (trade: Trade) => {
@@ -248,6 +247,12 @@ const TradeLog: React.FC = () => {
         trade={selectedTrade}
         isOpen={isReviewModalOpen}
         onClose={handleCloseReviewModal}
+      />
+
+      <EditTradeModal 
+        trade={trades.find(t => t.id === editingTradeId) || null}
+        isOpen={editingTradeId !== null}
+        onClose={() => setEditingTradeId(null)}
       />
     </div>
   );
