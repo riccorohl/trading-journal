@@ -335,14 +335,7 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
                 {trade.pnl ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : 'Open'}
               </Badge>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+
           </DialogTitle>
         </DialogHeader>
 
