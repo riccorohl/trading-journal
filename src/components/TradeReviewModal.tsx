@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTradeContext } from '../contexts/TradeContext';
 import { X, Calendar, DollarSign, TrendingUp, Brain } from 'lucide-react';
-import TradingViewLightweightChart from './TradingViewLightweightChart';
-import TradingViewFallback from './TradingViewFallback';
+
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,9 @@ interface Trade {
   marketConditions?: string;
   lessons?: string;
   analysis?: string;
+  screenshots?: {
+    [timeframe: string]: string; // Google Drive file IDs
+  };
 }
 
 interface TradeReviewModalProps {
@@ -45,250 +48,109 @@ interface TradeReviewModalProps {
 
 // Basic chart component focused on working functionality
 const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<any>(null);
+  const { updateTrade } = useTradeContext();
   const [timeframe, setTimeframe] = useState('1h');
-  const [status, setStatus] = useState('Loading...');
+  const [status, setStatus] = useState('Ready for screenshot upload');
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
+  
+  // Check if screenshot exists for current timeframe
+  const hasScreenshot = trade.screenshots && trade.screenshots[timeframe];
+  const screenshotUrl = hasScreenshot ? trade.screenshots[timeframe] : null; // Firebase download URL
 
-  const generateData = (tf: string) => {
-    const tradeDate = new Date(trade.date);
-    
-    // Parse trade time (assuming timeIn is in HH:MM format)
-    const tradeTime = trade.timeIn ? trade.timeIn.split(':') : ['9', '0'];
-    const tradeHour = parseInt(tradeTime[0]);
-    const tradeMinute = parseInt(tradeTime[1]);
-    
-    // Set trade date with actual time
-    tradeDate.setHours(tradeHour, tradeMinute, 0, 0);
-    
-    // End time: 4:00 PM EST (16:00) on trade date
-    const endDate = new Date(trade.date);
-    endDate.setHours(16, 0, 0, 0);
-    const endTime = endDate.getTime();
-    
-    // Start time: 6 days before trade date at 9:30 AM EST
-    const startDate = new Date(trade.date);
-    startDate.setDate(startDate.getDate() - 6);
-    startDate.setHours(9, 30, 0, 0);
-    const startTime = startDate.getTime();
-    
-    const intervals = {
-      '1m': 1 * 60 * 1000,
-      '5m': 5 * 60 * 1000,
-      '15m': 15 * 60 * 1000,
-      '30m': 30 * 60 * 1000, 
-      '1h': 60 * 60 * 1000,
-      '4h': 4 * 60 * 60 * 1000
-    };
-    
-    const interval = intervals[tf as keyof typeof intervals];
-    const data = [];
-    let currentTime = startTime;
-    
-    // Base price for different futures symbols (updated to realistic June 2025 levels)
-    const symbolPrices = {
-      'MES': trade.entryPrice || 5950,   // E-mini S&P 500 (correct range)
-      'MNQ': trade.entryPrice || 20500,  // E-mini Nasdaq  
-      'ES': trade.entryPrice || 5950,    // S&P 500 full size
-      'NQ': trade.entryPrice || 20500    // Nasdaq full size
-    };
-    
-    let basePrice = symbolPrices[trade.symbol as keyof typeof symbolPrices] || trade.entryPrice || 11550;
-    let lastClose = basePrice;
-    
-    // Adjust volatility based on timeframe
-    const volatilityMap = {
-      '1m': { range: 1, trend: 0.1 },
-      '5m': { range: 3, trend: 0.2 },
-      '15m': { range: 5, trend: 0.3 },
-      '30m': { range: 8, trend: 0.5 },
-      '1h': { range: 15, trend: 1.0 },
-      '4h': { range: 30, trend: 2.0 }
-    };
-    
-    const { range, trend } = volatilityMap[tf as keyof typeof volatilityMap];
-    
-    while (currentTime <= endTime) {
-      const currentDate = new Date(currentTime);
-      const hour = currentDate.getHours();
-      const minute = currentDate.getMinutes();
-      const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
-      
-      // Skip weekends (Saturday and Sunday)
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        currentTime += interval;
-        continue;
-      }
-      
-      // Main trading hours: 9:30 AM to 4:00 PM EST
-      const isMainSession = (hour > 9 || (hour === 9 && minute >= 30)) && hour < 16;
-      
-      // Skip non-trading hours completely for cleaner charts
-      if (!isMainSession) {
-        currentTime += interval;
-        continue;
-      }
-      
-      const volumeMultiplier = 1.0; // Full volume during market hours
-      
-      const open = lastClose;
-      
-      // Create realistic price movement with micro trends
-      const microTrend = (Math.random() - 0.5) * trend * volumeMultiplier;
-      const noise = (Math.random() - 0.5) * range * volumeMultiplier;
-      const close = open + microTrend + noise;
-      
-      // Calculate high/low with realistic wicks
-      const wickRange = range * 0.5 * volumeMultiplier;
-      const high = Math.max(open, close) + Math.random() * wickRange;
-      const low = Math.min(open, close) - Math.random() * wickRange;
-      
-      data.push({
-        time: Math.floor(currentTime / 1000),
-        open: parseFloat(open.toFixed(2)),
-        high: parseFloat(high.toFixed(2)),
-        low: parseFloat(low.toFixed(2)),
-        close: parseFloat(close.toFixed(2))
-      });
-      
-      lastClose = close;
-      currentTime += interval;
+  const handleFileUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
     }
-    
-    return data.sort((a, b) => a.time - b.time);
-  };
 
-  const createChart = async () => {
+    setUploading(true);
+    
     try {
-      setStatus('Loading chart...');
-      const charts = await import('lightweight-charts');
+      // Import Firebase storage service
+      const { uploadScreenshot } = await import('../lib/screenshotStorage');
       
-      if (!chartRef.current) return;
-      
-      // Remove existing chart
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.remove();
-      }
-      
-      // Create new chart
-      const chart = charts.createChart(chartRef.current, {
-        width: 700,
-        height: 400,
-        layout: {
-          background: { type: charts.ColorType.Solid, color: '#ffffff' },
-          textColor: '#333333',
-          fontSize: 12,
-        },
-        grid: {
-          vertLines: { color: '#f0f0f0' },
-          horzLines: { color: '#f0f0f0' },
-        },
-        crosshair: {
-          mode: charts.CrosshairMode.Normal,
-        },
-        rightPriceScale: {
-          borderColor: '#cccccc',
-          scaleMargins: {
-            top: 0.1,
-            bottom: 0.1,
-          },
-        },
-        timeScale: {
-          borderColor: '#cccccc',
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        handleScroll: {
-          mouseWheel: true,
-          pressedMouseMove: true,
-        },
-        handleScale: {
-          axisPressedMouseMove: true,
-          mouseWheel: true,
-          pinch: true,
-        },
+      // Upload with progress tracking
+      const downloadUrl = await uploadScreenshot(file, trade, timeframe, (progress) => {
+        setStatus(progress.message);
       });
       
-      chartInstanceRef.current = chart;
+      // Update trade record with screenshot URL
+      const currentScreenshots = trade.screenshots || {};
+      const updatedScreenshots = {
+        ...currentScreenshots,
+        [timeframe]: downloadUrl
+      };
       
-      // Add candlestick series
-      const series = chart.addSeries(charts.CandlestickSeries, {
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-      });
+      // Update the trade record in Firebase
+      await updateTrade(trade.id, { screenshots: updatedScreenshots });
       
-      // Set data
-      const data = generateData(timeframe);
-      series.setData(data);
-      
-      // Add entry price line
-      if (trade.entryPrice) {
-        series.createPriceLine({
-          price: trade.entryPrice,
-          color: '#2196F3',
-          lineWidth: 2,
-          lineStyle: charts.LineStyle.Solid,
-          axisLabelVisible: true,
-          title: `Entry: $${trade.entryPrice}`,
-        });
-      }
-      
-      // Add exit price line (if trade is closed)
-      if (trade.exitPrice) {
-        const isProfit = (trade.side === 'long' && trade.exitPrice > trade.entryPrice) ||
-                        (trade.side === 'short' && trade.exitPrice < trade.entryPrice);
-        
-        series.createPriceLine({
-          price: trade.exitPrice,
-          color: isProfit ? '#4CAF50' : '#F44336',
-          lineWidth: 2,
-          lineStyle: charts.LineStyle.Solid,
-          axisLabelVisible: true,
-          title: `Exit: $${trade.exitPrice}`,
-        });
-      }
-      
-      // Add stop loss line (if set)
-      if (trade.stopLoss) {
-        series.createPriceLine({
-          price: trade.stopLoss,
-          color: '#FF5722',
-          lineWidth: 1,
-          lineStyle: charts.LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: `Stop: $${trade.stopLoss}`,
-        });
-      }
-      
-      // Add take profit line (if set)
-      if (trade.takeProfit) {
-        series.createPriceLine({
-          price: trade.takeProfit,
-          color: '#8BC34A',
-          lineWidth: 1,
-          lineStyle: charts.LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: `Target: $${trade.takeProfit}`,
-        });
-      }
-      
-      chart.timeScale().fitContent();
-      
-      const dataPoints = data.length;
-      setStatus(`${trade.symbol} - ${timeframe} - 6 days + trade day (${dataPoints} bars)`);
+      setStatus('Screenshot uploaded and saved successfully!');
       
     } catch (error) {
-      console.error('Chart error:', error);
-      setStatus(`Error: ${error}`);
+      console.error('Upload failed:', error);
+      setStatus(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploading(false);
     }
   };
 
-  useEffect(() => {
-    createChart();
-  }, [timeframe, trade]);
+  // Helper function to extract Google Drive file ID
+  const extractFileIdFromUrl = (url: string): string | null => {
+    const patterns = [
+      /\/file\/d\/([a-zA-Z0-9-_]+)/,
+      /id=([a-zA-Z0-9-_]+)/,
+      /folders\/([a-zA-Z0-9-_]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  };
+
+  const handleImageClick = (imageUrl: string) => {
+    setModalImageUrl(imageUrl);
+    setShowImageModal(true);
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setModalImageUrl(null);
+  };
 
   return (
     <div className="w-full h-full p-4">
@@ -302,26 +164,111 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
               timeframe === tf
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            } ${trade.screenshots && trade.screenshots[tf] ? 'ring-2 ring-green-400' : ''}`}
           >
-            {tf}
+            {tf} {trade.screenshots && trade.screenshots[tf] ? '📸' : ''}
           </button>
         ))}
       </div>
       
       {/* Status */}
       <div className="text-center text-sm text-gray-600 mb-2">
-        {status}
+        {trade.symbol} - {timeframe} - {status}
       </div>
       
-      {/* Chart container */}
+      {/* Chart area */}
       <div className="flex justify-center">
-        <div 
-          ref={chartRef}
-          className="border rounded"
-          style={{ width: '700px', height: '400px' }}
-        />
+        {screenshotUrl ? (
+          // Display existing screenshot
+          <div className="relative">
+            <img 
+              src={screenshotUrl} 
+              alt={`${trade.symbol} ${timeframe} chart`}
+              className="max-w-full max-h-96 rounded border shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
+              style={{ maxWidth: '700px', maxHeight: '400px' }}
+              onClick={() => handleImageClick(screenshotUrl)}
+              title="Click to view full size"
+            />
+            <button
+              onClick={() => {
+                // TODO: Implement screenshot replacement
+                console.log('Replace screenshot for', timeframe);
+              }}
+              className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+            >
+              Replace
+            </button>
+          </div>
+        ) : (
+          // Upload area
+          <div 
+            className={`border-2 border-dashed rounded bg-gray-50 flex items-center justify-center cursor-pointer transition-colors ${
+              dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
+            } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ width: '700px', height: '400px' }}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => !uploading && document.getElementById('file-input')?.click()}
+          >
+            <div className="text-center text-gray-500">
+              {uploading ? (
+                <>
+                  <div className="text-lg font-medium mb-2">Uploading...</div>
+                  <div className="text-sm">Please wait</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium mb-2">📸 Upload Chart Screenshot</div>
+                  <div className="text-sm">Drag & drop or click to upload</div>
+                  <div className="text-xs mt-2 text-gray-400">
+                    For {trade.symbol} - {timeframe} timeframe
+                  </div>
+                </>
+              )}
+            </div>
+            <input
+              id="file-input"
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              disabled={uploading}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Full-size image modal */}
+      {showImageModal && modalImageUrl && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-[95vw] max-h-[95vh] flex items-center justify-center">
+            <img 
+              src={modalImageUrl}
+              alt="Full size chart"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+            />
+            
+            {/* Close button */}
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
+              title="Close (ESC)"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            
+            {/* Info overlay */}
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded">
+              {trade.symbol} - {timeframe} - Click outside to close
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
