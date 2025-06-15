@@ -152,6 +152,20 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
     setModalImageUrl(null);
   };
 
+  // Add keyboard support for closing modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showImageModal) {
+        closeImageModal();
+      }
+    };
+
+    if (showImageModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showImageModal]);
+
   return (
     <div className="w-full h-full p-4">
       {/* Timeframe buttons */}
@@ -239,32 +253,43 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
         )}
       </div>
 
-      {/* Full-size image modal */}
+      {/* Full-size image modal - within dialog bounds */}
       {showImageModal && modalImageUrl && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
           onClick={closeImageModal}
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0,
+            zIndex: 1000
+          }}
         >
-          <div className="relative max-w-[95vw] max-h-[95vh] flex items-center justify-center">
+          <div className="relative flex items-center justify-center">
             <img 
               src={modalImageUrl}
               alt="Full size chart"
-              className="max-w-full max-h-full object-contain"
+              className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl"
               onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
             />
             
             {/* Close button */}
             <button
-              onClick={closeImageModal}
-              className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeImageModal();
+              }}
+              className="absolute top-4 right-4 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-3 transition-all z-10"
               title="Close (ESC)"
             >
               <X className="h-6 w-6" />
             </button>
             
             {/* Info overlay */}
-            <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded">
-              {trade.symbol} - {timeframe} - Click outside to close
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg">
+              {trade.symbol} - {timeframe} - Click anywhere outside image to close
             </div>
           </div>
         </div>
