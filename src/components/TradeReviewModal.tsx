@@ -1,43 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Textarea } from './ui/textarea';
+import { X, Calendar, DollarSign, TrendingUp, Brain, FileText } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
-import { X, Calendar, DollarSign, TrendingUp, Brain } from 'lucide-react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 
 interface Trade {
   id: string;
   symbol: string;
+  side: 'long' | 'short';
+  quantity: number;
+  entryPrice: number;
+  exitPrice?: number;
   date: string;
   timeIn: string;
   timeOut?: string;
-  side: 'long' | 'short';
-  entryPrice: number;
-  exitPrice?: number;
-  quantity: number;
-  stopLoss?: number;
-  takeProfit?: number;
   pnl?: number;
   commission?: number;
+  stopLoss?: number;
+  takeProfit?: number;
   strategy?: string;
   notes?: string;
-  confidence?: number;
-  emotions?: string;
-  marketConditions?: string;
-  lessons?: string;
   analysis?: string;
-  screenshots?: {
-    [timeframe: string]: string; // Google Drive file IDs
-  };
+  lessons?: string;
+  screenshots?: { [timeframe: string]: string };
 }
 
 interface TradeReviewModalProps {
@@ -46,19 +35,30 @@ interface TradeReviewModalProps {
   onClose: () => void;
 }
 
-// Basic chart component focused on working functionality
+// BasicChart component for screenshot management
 const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
-  const { updateTrade } = useTradeContext();
   const [timeframe, setTimeframe] = useState('1h');
-  const [status, setStatus] = useState('Ready for screenshot upload');
   const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState('Ready for screenshot upload');
   const [dragOver, setDragOver] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
   
-  // Check if screenshot exists for current timeframe
-  const hasScreenshot = trade.screenshots && trade.screenshots[timeframe];
-  const screenshotUrl = hasScreenshot ? trade.screenshots[timeframe] : null; // Firebase download URL
+  // Local state for screenshots to enable real-time updates
+  const [localScreenshots, setLocalScreenshots] = useState<{ [timeframe: string]: string } | null>(
+    trade.screenshots || null
+  );
+  
+  const { updateTrade } = useTradeContext();
+  
+  // Update local screenshots when trade prop changes
+  useEffect(() => {
+    setLocalScreenshots(trade.screenshots || null);
+  }, [trade.screenshots]);
+  
+  // Check if screenshot exists for current timeframe using local state
+  const hasScreenshot = localScreenshots && localScreenshots[timeframe];
+  const screenshotUrl = hasScreenshot ? localScreenshots[timeframe] : null; // Firebase download URL
 
   const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -79,13 +79,12 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
       
       // Update trade record with screenshot URL
       const currentScreenshots = trade.screenshots || {};
-      const updatedScreenshots = {
-        ...currentScreenshots,
-        [timeframe]: downloadUrl
-      };
+      const updatedScreenshots = { ...currentScreenshots, [timeframe]: downloadUrl };
       
-      // Update the trade record in Firebase
       await updateTrade(trade.id, { screenshots: updatedScreenshots });
+      
+      // Update local state immediately for real-time UI update
+      setLocalScreenshots(updatedScreenshots);
       
       setStatus('Screenshot uploaded and saved successfully!');
       
@@ -97,27 +96,69 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
     }
   };
 
-  // Helper function to extract Google Drive file ID
-  const extractFileIdFromUrl = (url: string): string | null => {
-    const patterns = [
-      /\/file\/d\/([a-zA-Z0-9-_]+)/,
-      /id=([a-zA-Z0-9-_]+)/,
-      /folders\/([a-zA-Z0-9-_]+)/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) {
-        return match[1];
+  const handleReplaceScreenshot = () => {
+    // Create a hidden file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        handleFileUpload(file);
       }
+    };
+    input.click();
+  };
+
+  const handleDeleteScreenshot = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the ${timeframe} screenshot for ${trade.symbol}?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setUploading(true);
+    setStatus('Deleting screenshot...');
+
+    try {
+      // Import Firebase storage service
+      const { deleteScreenshot } = await import('../lib/screenshotStorage');
+      
+      // Delete from Firebase Storage
+      if (screenshotUrl) {
+        await deleteScreenshot(screenshotUrl);
+      }
+      
+      // Update trade record to remove screenshot URL
+      const currentScreenshots = trade.screenshots || {};
+      const updatedScreenshots = { ...currentScreenshots };
+      delete updatedScreenshots[timeframe];
+      
+      await updateTrade(trade.id, { 
+        screenshots: Object.keys(updatedScreenshots).length > 0 ? updatedScreenshots : null 
+      });
+      
+      // Update local state immediately for real-time UI update
+      const finalScreenshots = Object.keys(updatedScreenshots).length > 0 ? updatedScreenshots : null;
+      setLocalScreenshots(finalScreenshots);
+      
+      setStatus('Screenshot deleted successfully');
+      setTimeout(() => setStatus('Ready for screenshot upload'), 2000);
+      
+    } catch (error) {
+      console.error('Delete failed:', error);
+      setStatus('Delete failed. Please try again.');
+    } finally {
+      setUploading(false);
     }
-    
-    return null;
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    
+    if (uploading) return;
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
@@ -135,13 +176,6 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
     setDragOver(false);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFileUpload(files[0]);
-    }
-  };
-
   const handleImageClick = (imageUrl: string) => {
     setModalImageUrl(imageUrl);
     setShowImageModal(true);
@@ -152,7 +186,7 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
     setModalImageUrl(null);
   };
 
-  // Add keyboard support for closing modal
+  // Handle ESC key for image modal
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && showImageModal) {
@@ -162,25 +196,30 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
 
     if (showImageModal) {
       document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
     }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [showImageModal]);
 
   return (
-    <div className="w-full h-full p-4">
+    <div className="h-full flex flex-col">
       {/* Timeframe buttons */}
       <div className="flex gap-2 mb-4">
         {['1m', '5m', '15m', '30m', '1h', '4h'].map((tf) => (
           <button
             key={tf}
             onClick={() => setTimeframe(tf)}
-            className={`px-3 py-1 rounded text-sm font-medium ${
-              timeframe === tf
-                ? 'bg-blue-500 text-white'
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              timeframe === tf 
+                ? 'bg-blue-500 text-white' 
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            } ${trade.screenshots && trade.screenshots[tf] ? 'ring-2 ring-green-400' : ''}`}
+            } ${localScreenshots?.[tf] ? 'ring-2 ring-green-400' : ''}`}
+            title={localScreenshots?.[tf] ? 'Screenshot available' : 'No screenshot'}
           >
-            {tf} {trade.screenshots && trade.screenshots[tf] ? '📸' : ''}
+            {tf}
+            {localScreenshots?.[tf] && <span className="ml-1">📸</span>}
           </button>
         ))}
       </div>
@@ -203,15 +242,24 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
               onClick={() => handleImageClick(screenshotUrl)}
               title="Click to view full size"
             />
-            <button
-              onClick={() => {
-                // TODO: Implement screenshot replacement
-                console.log('Replace screenshot for', timeframe);
-              }}
-              className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
-            >
-              Replace
-            </button>
+            <div className="absolute top-2 right-2 flex gap-1">
+              <button
+                onClick={handleReplaceScreenshot}
+                disabled={uploading}
+                className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Replace screenshot"
+              >
+                Replace
+              </button>
+              <button
+                onClick={handleDeleteScreenshot}
+                disabled={uploading}
+                className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Delete screenshot"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ) : (
           // Upload area
@@ -233,11 +281,10 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
                 </>
               ) : (
                 <>
-                  <div className="text-lg font-medium mb-2">📸 Upload Chart Screenshot</div>
+                  <div className="text-6xl mb-4">📸</div>
+                  <div className="text-lg font-medium mb-2">Upload Chart Screenshot</div>
                   <div className="text-sm">Drag & drop or click to upload</div>
-                  <div className="text-xs mt-2 text-gray-400">
-                    For {trade.symbol} - {timeframe} timeframe
-                  </div>
+                  <div className="text-xs text-gray-400 mt-1">For {trade.symbol} - {timeframe} timeframe</div>
                 </>
               )}
             </div>
@@ -245,34 +292,28 @@ const BasicChart: React.FC<{ trade: Trade }> = ({ trade }) => {
               id="file-input"
               type="file"
               accept="image/*"
-              onChange={handleFileSelect}
               className="hidden"
-              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+              }}
             />
           </div>
         )}
       </div>
-
-      {/* Full-size image modal - within dialog bounds */}
+      
+      {/* Image Modal */}
       {showImageModal && modalImageUrl && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
           onClick={closeImageModal}
-          style={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0,
-            zIndex: 1000
-          }}
         >
-          <div className="relative flex items-center justify-center">
+          <div className="relative max-w-[95vw] max-h-[95vh]">
             <img 
-              src={modalImageUrl}
+              src={modalImageUrl} 
               alt="Full size chart"
-              className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl"
-              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             />
             
             {/* Close button */}
@@ -312,6 +353,23 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
   const [analysis, setAnalysis] = useState(trade.analysis || '');
   const [lessons, setLessons] = useState(trade.lessons || '');
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const rMultiple = trade.pnl && trade.stopLoss 
     ? Math.abs(trade.pnl / (Math.abs(trade.entryPrice - trade.stopLoss) * trade.quantity))
     : 0;
@@ -322,8 +380,8 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden [&>button]:hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -335,7 +393,15 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
                 {trade.pnl ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : 'Open'}
               </Badge>
             </div>
-
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-6 w-6 p-0 hover:bg-gray-100"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
@@ -373,41 +439,28 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
               </TabsContent>
               
               <TabsContent value="notes" className="h-[calc(100%-3rem)] mt-4">
-                <div className="space-y-4 h-full">
-                  <Card className="h-1/2">
-                    <CardHeader>
-                      <CardTitle>Trade Notes</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[calc(100%-4rem)]">
-                      <Textarea
-                        placeholder="General notes about this trade..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="h-full resize-none"
-                      />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="h-1/2">
-                    <CardHeader>
-                      <CardTitle>Lessons Learned</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[calc(100%-4rem)]">
-                      <Textarea
-                        placeholder="Key takeaways for future trades..."
-                        value={lessons}
-                        onChange={(e) => setLessons(e.target.value)}
-                        className="h-full resize-none"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Notes & Lessons
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[calc(100%-5rem)]">
+                    <Textarea
+                      placeholder="Key takeaways, lessons learned, areas for improvement..."
+                      value={lessons}
+                      onChange={(e) => setLessons(e.target.value)}
+                      className="h-full resize-none"
+                    />
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
-
-          {/* Stats Sidebar */}
-          <div className="col-span-4 space-y-4 overflow-y-auto">
+          
+          {/* Trade Details Sidebar */}
+          <div className="col-span-4 space-y-6">
             {/* Trade Details */}
             <Card>
               <CardHeader>
@@ -416,23 +469,23 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
                   Trade Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-gray-600">Date</div>
+                    <div className="text-gray-500">Date</div>
                     <div className="font-medium">{trade.date}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Quantity</div>
+                    <div className="text-gray-500">Quantity</div>
                     <div className="font-medium">{trade.quantity}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Time In</div>
-                    <div className="font-medium">{trade.timeIn || 'N/A'}</div>
+                    <div className="text-gray-500">Time In</div>
+                    <div className="font-medium">{trade.timeIn}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Time Out</div>
-                    <div className="font-medium">{trade.timeOut || 'N/A'}</div>
+                    <div className="text-gray-500">Time Out</div>
+                    <div className="font-medium">{trade.timeOut || 'Open'}</div>
                   </div>
                 </div>
               </CardContent>
@@ -446,32 +499,43 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
                   P&L Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-gray-600">Entry Price</div>
+                    <div className="text-gray-500">Entry Price</div>
                     <div className="font-medium">${trade.entryPrice}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Exit Price</div>
-                    <div className="font-medium">{trade.exitPrice ? `$${trade.exitPrice}` : 'Open'}</div>
+                    <div className="text-gray-500">Exit Price</div>
+                    <div className="font-medium">${trade.exitPrice || 'Open'}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Gross P&L</div>
+                    <div className="text-gray-500">Gross P&L</div>
                     <div className={`font-medium ${trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {trade.pnl ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : 'N/A'}
+                      {trade.pnl ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : 'Open'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-gray-600">Commission</div>
+                    <div className="text-gray-500">Commission</div>
                     <div className="font-medium">${trade.commission || 0}</div>
                   </div>
                 </div>
+                
+                {rMultiple > 0 && (
+                  <div className="pt-2 border-t">
+                    <div className="text-gray-500 text-sm">R-Multiple</div>
+                    <div className="font-medium text-lg">{rMultiple.toFixed(2)}R</div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Save Button */}
-            <Button onClick={handleSave} className="w-full">
+            <Button 
+              onClick={handleSave}
+              className="w-full"
+              size="lg"
+            >
               Save Changes
             </Button>
           </div>
