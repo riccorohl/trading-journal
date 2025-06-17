@@ -5,6 +5,7 @@ import AddTrade from '../components/AddTrade';
 import TradeLog from '../components/TradeLog';
 import DailyJournal from '../components/DailyJournal';
 import Playbooks from '../components/Playbooks';
+import Reports from '../components/Reports';
 import ImportTrades from '../components/ImportTrades';
 
 const Index: React.FC = () => {
@@ -54,6 +55,8 @@ const Index: React.FC = () => {
         return <TradeLog />;
       case 'journal':
         return <DailyJournal />;
+      case 'reports':
+        return <Reports />;
       case 'playbooks':
         return <Playbooks />;
       default:

@@ -176,17 +176,32 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, isOpen, onCl
           </Card>
         </div>
 
-        {/* Chart Placeholder */}
-        <Card className="mt-6">
+        {/* Performance Metrics */}
+        <Card>
           <CardHeader>
-            <CardTitle>Price Chart</CardTitle>
+            <CardTitle>Performance Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">TradingView Chart Integration</p>
-                <p className="text-sm text-gray-400">Coming soon...</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Risk/Reward</p>
+                  <p className="text-lg font-semibold">
+                    {trade.pnl && trade.stopLoss 
+                      ? `1:${Math.abs(trade.pnl / (Math.abs(trade.entryPrice - trade.stopLoss) * trade.quantity)).toFixed(2)}`
+                      : 'N/A'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Hold Duration</p>
+                  <p className="text-lg font-semibold">
+                    {trade.exitDate 
+                      ? `${Math.round((new Date(trade.exitDate).getTime() - new Date(trade.date).getTime()) / (1000 * 60 * 60 * 24))} days`
+                      : 'Open'
+                    }
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -1,7 +1,1 @@
-# Yahoo Finance Backend Setup
-
-## Install Dependencies
-
-Run these commands in your project directory:
-
-```bash
+# File removed - TradingView integration removed per user request# File removed - TradingView integration removed per user request
