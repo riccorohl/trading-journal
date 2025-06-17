@@ -82,7 +82,7 @@ export default function DailyJournalView({ selectedDate, onClose }: DailyJournal
     totalTrades: dayTrades.length,
     winners: dayTrades.filter(t => t.result === 'WIN').length,
     losers: dayTrades.filter(t => t.result === 'LOSS').length,
-    totalPnL: dayTrades.reduce((sum, t) => sum + (t.netPnL || 0), 0),
+    totalPnL: dayTrades.reduce((sum, t) => sum + (t.pnl || 0), 0),
     winRate: dayTrades.length > 0 
       ? (dayTrades.filter(t => t.result === 'WIN').length / dayTrades.length * 100).toFixed(1)
       : '0'
@@ -295,9 +295,9 @@ export default function DailyJournalView({ selectedDate, onClose }: DailyJournal
                         </td>
                         <td className="py-3 px-4">{trade.quantity}</td>
                         <td className={`py-3 px-4 font-mono ${
-                          (trade.netPnL || 0) >= 0 ? 'text-green-500' : 'text-red-500'
+                          (trade.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
                         }`}>
-                          {(trade.netPnL || 0) >= 0 ? '+' : ''}${(trade.netPnL || 0).toFixed(2)}
+                          {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${

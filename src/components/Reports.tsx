@@ -2,6 +2,22 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTradeContext } from '@/contexts/TradeContext';
 import { TrendingUp, TrendingDown, Target, DollarSign } from 'lucide-react';
+import MetricCard from './MetricCard';
+import { 
+  ChartContainer, 
+  ChartTooltip 
+} from '@/components/ui/chart';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  PieChart, 
+  Pie, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid 
+} from 'recharts';
 
 const Reports: React.FC = () => {
   const { trades } = useTradeContext();
@@ -54,6 +70,96 @@ const Reports: React.FC = () => {
     };
   }, [closedTrades]);
 
+  // Prepare data for equity curve
+  const equityCurveData = useMemo(() => {
+    if (closedTrades.length === 0) return [];
+    
+    const sortedTrades = [...closedTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let runningBalance = 0;
+    
+    return sortedTrades.map((trade, index) => {
+      runningBalance += trade.pnl - (trade.commission || 0);
+      return {
+        trade: index + 1,
+        balance: runningBalance,
+        date: new Date(trade.date).toLocaleDateString(),
+        symbol: trade.symbol,
+        pnl: trade.pnl
+      };
+    });
+  }, [closedTrades]);
+
+  // Prepare data for monthly performance
+  const monthlyData = useMemo(() => {
+    if (closedTrades.length === 0) return [];
+    
+    const monthlyMap = new Map<string, { pnl: number, trades: number }>();
+    
+    closedTrades.forEach(trade => {
+      const date = new Date(trade.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const existing = monthlyMap.get(monthKey) || { pnl: 0, trades: 0 };
+      
+      monthlyMap.set(monthKey, {
+        pnl: existing.pnl + trade.pnl - (trade.commission || 0),
+        trades: existing.trades + 1
+      });
+    });
+    
+    return Array.from(monthlyMap.entries())
+      .sort()
+      .map(([month, data]) => ({
+        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        pnl: data.pnl,
+        trades: data.trades
+      }));
+  }, [closedTrades]);
+
+  // Prepare data for symbol performance
+  const symbolData = useMemo(() => {
+    if (closedTrades.length === 0) return [];
+    
+    const symbolMap = new Map<string, { pnl: number, trades: number, wins: number }>();
+    
+    closedTrades.forEach(trade => {
+      const existing = symbolMap.get(trade.symbol) || { pnl: 0, trades: 0, wins: 0 };
+      
+      symbolMap.set(trade.symbol, {
+        pnl: existing.pnl + trade.pnl - (trade.commission || 0),
+        trades: existing.trades + 1,
+        wins: existing.wins + (trade.pnl > 0 ? 1 : 0)
+      });
+    });
+    
+    return Array.from(symbolMap.entries())
+      .map(([symbol, data]) => ({
+        symbol,
+        pnl: data.pnl,
+        trades: data.trades,
+        winRate: (data.wins / data.trades) * 100
+      }))
+      .sort((a, b) => b.pnl - a.pnl)
+      .slice(0, 10); // Top 10 symbols
+  }, [closedTrades]);
+
+  // Win/Loss distribution data
+  const winLossData = useMemo(() => {
+    if (closedTrades.length === 0) return [];
+    
+    return [
+      {
+        name: 'Winning Trades',
+        value: metrics.winningTrades,
+        fill: '#10b981'
+      },
+      {
+        name: 'Losing Trades', 
+        value: metrics.losingTrades,
+        fill: '#ef4444'
+      }
+    ];
+  }, [metrics]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -102,155 +208,257 @@ const Reports: React.FC = () => {
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Net P&L"
+          value={formatCurrency(metrics.netPnL)}
+          subtitle={`Gross: ${formatCurrency(metrics.totalPnL)} | Fees: ${formatCurrency(metrics.totalCommissions)}`}
+          color={metrics.netPnL >= 0 ? 'green' : 'red'}
+        />
+        <MetricCard
+          title="Win Rate"
+          value={formatPercentage(metrics.winRate)}
+          subtitle={`${metrics.winningTrades}W / ${metrics.losingTrades}L / ${metrics.totalTrades} Total`}
+          color={metrics.winRate >= 50 ? 'green' : 'red'}
+        />
+        <MetricCard
+          title="Profit Factor"
+          value={metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}
+          subtitle={`Avg Win: ${formatCurrency(metrics.avgWin)} | Avg Loss: ${formatCurrency(metrics.avgLoss)}`}
+          color={metrics.profitFactor >= 1 ? 'green' : 'red'}
+        />
+        <MetricCard
+          title="Total Trades"
+          value={metrics.totalTrades.toString()}
+          subtitle={`${metrics.winningTrades} winners, ${metrics.losingTrades} losers`}
+          color="blue"
+        />
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Equity Curve */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net P&L</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Equity Curve</CardTitle>
+            <p className="text-sm text-gray-600">Your account balance over time</p>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${metrics.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(metrics.netPnL)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Gross: {formatCurrency(metrics.totalPnL)} | Fees: {formatCurrency(metrics.totalCommissions)}
-            </p>
+            <ChartContainer config={{
+              balance: { label: "Balance", color: "#2563eb" }
+            }} className="h-64">
+              <LineChart data={equityCurveData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="trade" />
+                <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                <ChartTooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border rounded shadow">
+                          <p className="font-medium">Trade #{label}</p>
+                          <p className="text-sm text-gray-600">{data.date}</p>
+                          <p className="text-sm">Symbol: {data.symbol}</p>
+                          <p className="text-sm">Trade P&L: {formatCurrency(data.pnl)}</p>
+                          <p className="font-medium">Balance: {formatCurrency(data.balance)}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="balance" 
+                  stroke="#2563eb" 
+                  strokeWidth={2}
+                  dot={{ fill: '#2563eb', strokeWidth: 0, r: 3 }}
+                />
+              </LineChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
+        {/* Win/Loss Distribution */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Win/Loss Distribution</CardTitle>
+            <p className="text-sm text-gray-600">Breakdown of winning vs losing trades</p>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPercentage(metrics.winRate)}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics.winningTrades}W / {metrics.losingTrades}L / {metrics.totalTrades} Total
-            </p>
+            <ChartContainer config={{
+              wins: { label: "Wins", color: "#10b981" },
+              losses: { label: "Losses", color: "#ef4444" }
+            }} className="h-64">
+              <PieChart>
+                <Pie
+                  data={winLossData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="value"
+                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                />
+                <ChartTooltip />
+              </PieChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
+        {/* Monthly Performance */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profit Factor</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Monthly Performance</CardTitle>
+            <p className="text-sm text-gray-600">P&L breakdown by month</p>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${metrics.profitFactor >= 1.5 ? 'text-green-600' : metrics.profitFactor >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Avg Win: {formatCurrency(metrics.avgWin)} | Avg Loss: {formatCurrency(metrics.avgLoss)}
-            </p>
+            <ChartContainer config={{
+              pnl: { label: "P&L", color: "#059669" }
+            }} className="h-64">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                <ChartTooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border rounded shadow">
+                          <p className="font-medium">{label}</p>
+                          <p className="text-sm">P&L: {formatCurrency(data.pnl)}</p>
+                          <p className="text-sm">Trades: {data.trades}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar 
+                  dataKey="pnl" 
+                  fill="#059669"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
+        {/* Symbol Performance */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Top Performing Symbols</CardTitle>
+            <p className="text-sm text-gray-600">Performance by trading symbol</p>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalTrades}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics.winningTrades} winners, {metrics.losingTrades} losers
-            </p>
+            <ChartContainer config={{
+              pnl: { label: "P&L", color: "#7c3aed" }
+            }} className="h-64">
+              <BarChart data={symbolData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
+                <YAxis dataKey="symbol" type="category" width={60} />
+                <ChartTooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border rounded shadow">
+                          <p className="font-medium">{label}</p>
+                          <p className="text-sm">P&L: {formatCurrency(data.pnl)}</p>
+                          <p className="text-sm">Trades: {data.trades}</p>
+                          <p className="text-sm">Win Rate: {data.winRate.toFixed(1)}%</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar 
+                  dataKey="pnl" 
+                  fill="#7c3aed"
+                  radius={[0, 4, 4, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Performance Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Performance Summary Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Trading Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
-              <h4 className="font-semibold text-gray-900">Trading Statistics</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Trades:</span>
-                  <span className="font-medium">{metrics.totalTrades}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Win Rate:</span>
-                  <span className="font-medium">{formatPercentage(metrics.winRate)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Profit Factor:</span>
-                  <span className={`font-medium ${metrics.profitFactor >= 1.5 ? 'text-green-600' : metrics.profitFactor >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}
-                  </span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Trades:</span>
+                <span className="font-medium">{metrics.totalTrades}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Win Rate:</span>
+                <span className="font-medium">{formatPercentage(metrics.winRate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Profit Factor:</span>
+                <span className="font-medium">{metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Win/Loss Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
-              <h4 className="font-semibold text-gray-900">Win/Loss Analysis</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Winning Trades:</span>
-                  <span className="text-green-600 font-medium">{metrics.winningTrades}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Losing Trades:</span>
-                  <span className="text-red-600 font-medium">{metrics.losingTrades}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Average Win:</span>
-                  <span className="text-green-600 font-medium">{formatCurrency(metrics.avgWin)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Average Loss:</span>
-                  <span className="text-red-600 font-medium">{formatCurrency(metrics.avgLoss)}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Winning Trades:</span>
+                <span className="font-medium text-green-600">{metrics.winningTrades}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Losing Trades:</span>
+                <span className="font-medium text-red-600">{metrics.losingTrades}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Average Win:</span>
+                <span className="font-medium text-green-600">{formatCurrency(metrics.avgWin)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Average Loss:</span>
+                <span className="font-medium text-red-600">{formatCurrency(metrics.avgLoss)}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Financial Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
-              <h4 className="font-semibold text-gray-900">Financial Summary</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Gross P&L:</span>
-                  <span className={`font-medium ${metrics.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(metrics.totalPnL)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Commissions:</span>
-                  <span className="text-red-600 font-medium">{formatCurrency(metrics.totalCommissions)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Net P&L:</span>
-                  <span className={`font-medium ${metrics.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(metrics.netPnL)}
-                  </span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Gross P&L:</span>
+                <span className="font-medium">{formatCurrency(metrics.totalPnL)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Commissions:</span>
+                <span className="font-medium text-red-600">{formatCurrency(metrics.totalCommissions)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Net P&L:</span>
+                <span className={`font-medium ${metrics.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(metrics.netPnL)}
+                </span>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Coming Soon Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Advanced Analytics Coming Soon</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 mb-4">
-            Additional charts and analytics will be added here:
-          </p>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li>• Equity curve visualization</li>
-            <li>• Monthly performance breakdown</li>
-            <li>• Symbol performance analysis</li>
-            <li>• Long vs Short comparison</li>
-            <li>• Risk management metrics</li>
-          </ul>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
