@@ -128,6 +128,26 @@ app.get('/api/futures/:symbol', async (req, res) => {
   }
 });
 
+// API endpoint to fetch prebuilds for the current user
+app.get('/api/prebuilds', async (req, res) => {
+  try {
+    // In a real application, you would have authentication and user context.
+    // For now, we'll assume a user is logged in and return an empty array.
+    const prebuilds = []; 
+    res.json({
+      success: true,
+      data: prebuilds,
+      count: prebuilds.length,
+    });
+  } catch (error) {
+    console.error('Error fetching prebuilds:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'Yahoo Finance Futures Data' });
