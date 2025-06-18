@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
-import { useTradeContext } from '../contexts/TradeContext';
+import { useTradeContext } from '@/contexts/TradeContext';
+import { Upload, X, CheckCircle } from 'lucide-react';
 
 interface ImportTradesProps {
   onClose: () => void;
@@ -111,27 +111,24 @@ const ImportTrades: React.FC<ImportTradesProps> = ({ onClose }) => {
         onClick={() => fileInputRef.current?.click()}
       >
         <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-lg font-medium text-gray-900 mb-2">Drop your CSV file here</p>
-        <p className="text-gray-600 mb-4">or click to browse</p>
-        <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-          Select File
-        </button>
+        <p className="text-lg font-medium text-gray-900 mb-2">
+          Click to upload or drag and drop
+        </p>
+        <p className="text-gray-600">CSV files only</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       </div>
 
       {error && (
-        <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileUpload}
-        className="hidden"
-      />
     </div>
   );
 
