@@ -4,11 +4,12 @@ import { ChevronLeft, ChevronRight, Settings, Info } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
 interface CalendarWidgetProps {
-  onDayClick?: (date: string) => void;
+  trades: any[];
+  onDateClick?: (date: string) => void;
 }
 
-const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
-  const { trades } = useTradeContext();
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ trades, onDateClick }) => {
+  // trades now passed as prop
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const currentYear = currentDate.getFullYear();
@@ -79,8 +80,8 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDayClick }) => {
     // Create date string in YYYY-MM-DD format
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     console.log('Calendar day clicked:', dateString);
-    if (onDayClick) {
-      onDayClick(dateString);
+    if (onDateClick) {
+      onDateClick(dateString);
     }
   };
 

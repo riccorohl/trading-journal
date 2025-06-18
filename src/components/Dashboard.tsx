@@ -5,6 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 import TradeReviewModal from './TradeReviewModal';
 import CalendarWidget from './CalendarWidget';
 import MetricCard from './MetricCard';
+import DayTradesModal from './DayTradesModal';
 import { formatDateForTable } from '../lib/dateUtils';
 import { Trade } from '../types/trade';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -18,6 +19,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   const { trades, loading } = useTradeContext();
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
 
   const handleTradeClick = (trade: Trade) => {
     setSelectedTrade(trade);
@@ -27,6 +30,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   const handleCloseReviewModal = () => {
     setIsReviewModalOpen(false);
     setSelectedTrade(null);
+  };
+
+  const handleDateClick = (date: string) => {
+    setSelectedDate(date);
+    setIsDayModalOpen(true);
+  };
+
+  const handleCloseDayModal = () => {
+    setIsDayModalOpen(false);
+    setSelectedDate('');
+  };
+
+  const handleDayTradeClick = (trade: Trade) => {
+    // Close day modal and open trade review modal
+    setIsDayModalOpen(false);
+    setSelectedTrade(trade);
+    setIsReviewModalOpen(true);
   };
 
   // Calculate metrics
@@ -345,7 +365,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           <div className="bg-white p-6 rounded-lg shadow">
             <CalendarWidget 
               trades={trades} 
-              onDateClick={onNavigateToJournal}
+              onDateClick={handleDateClick}
             />
           </div>
         </div>
@@ -357,6 +377,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           trade={selectedTrade}
           isOpen={isReviewModalOpen}
           onClose={handleCloseReviewModal}
+        />
+      )}
+
+      {/* Day Trades Modal */}
+      {isDayModalOpen && (
+        <DayTradesModal
+          isOpen={isDayModalOpen}
+          onClose={handleCloseDayModal}
+          date={selectedDate}
+          trades={trades.filter(trade => trade.date === selectedDate)}
+          onTradeClick={handleDayTradeClick}
         />
       )}
     </>
