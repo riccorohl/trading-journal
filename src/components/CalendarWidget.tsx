@@ -166,7 +166,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ trades, onDateClick }) 
           </div>
           <div className="flex items-center space-x-4 sm:space-x-6">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Monthly stats:</span>
+              <span className="text-sm text-gray-600">Monthly PnL:</span>
               <span className={`text-sm font-semibold ${monthlyStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ${monthlyStats.totalPnL >= 0 ? '+' : ''}{monthlyStats.totalPnL.toFixed(0)}
               </span>
