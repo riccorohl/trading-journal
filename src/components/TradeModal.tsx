@@ -41,6 +41,7 @@ const TradeModal: React.FC<TradeModalProps> = ({ trade, isOpen, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTrade, setEditedTrade] = useState<Trade | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [chartType, setChartType] = useState<'HTF' | 'LTF'>('HTF');
 
   useEffect(() => {
     if (trade) {
@@ -133,10 +134,10 @@ const TradeModal: React.FC<TradeModalProps> = ({ trade, isOpen, onClose }) => {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
-              Overview
+              Overview & Charts
             </TabsTrigger>
             <TabsTrigger value="risk" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
@@ -146,213 +147,258 @@ const TradeModal: React.FC<TradeModalProps> = ({ trade, isOpen, onClose }) => {
               <Brain className="w-4 h-4" />
               Analysis
             </TabsTrigger>
-            <TabsTrigger value="charts" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Charts
-            </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
+          {/* Overview Tab with Charts */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Trade Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    Trade Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="entryPrice">Entry Price</Label>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Chart Section */}
+              <div className="flex-1">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5" />
+                        Chart Analysis
+                      </CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={chartType === 'LTF' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChartType('LTF')}
+                        >
+                          LTF
+                        </Button>
+                        <Button
+                          variant={chartType === 'HTF' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChartType('HTF')}
+                        >
+                          HTF
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                      <ImageIcon className="w-16 h-16 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {chartType} Chart - {editedTrade.symbol}
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        {chartType === 'HTF' 
+                          ? 'Higher Time Frame chart for overall trend analysis'
+                          : 'Lower Time Frame chart for entry/exit precision'
+                        }
+                      </p>
+                      {isEditing && (
+                        <Button variant="outline">
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload {chartType} Chart
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Metrics Section - Vertical Layout */}
+              <div className="w-full lg:w-80 space-y-4">
+                {/* Performance Metrics */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <TrendingUp className="w-5 h-5" />
+                      Performance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center border-b pb-3">
+                      <div className={`text-2xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                        {editedTrade.pnl !== undefined ? `${isProfitable ? '+' : ''}$${editedTrade.pnl.toFixed(2)}` : 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">P&L</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {rMultiple ? `${rMultiple.toFixed(2)}R` : 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-500">R-Multiple</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {editedTrade.exitPrice && editedTrade.entryPrice 
+                            ? `${(((editedTrade.exitPrice - editedTrade.entryPrice) / editedTrade.entryPrice) * 100).toFixed(2)}%`
+                            : 'N/A'
+                          }
+                        </div>
+                        <div className="text-xs text-gray-500">Return %</div>
+                      </div>
+                    </div>
+                    <div className="text-center border-t pt-3">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {editedTrade.timeOut && editedTrade.timeIn 
+                          ? (() => {
+                              const [inHour, inMin] = editedTrade.timeIn.split(':').map(Number);
+                              const [outHour, outMin] = editedTrade.timeOut!.split(':').map(Number);
+                              const inMinutes = inHour * 60 + inMin;
+                              const outMinutes = outHour * 60 + outMin;
+                              const diffMinutes = outMinutes - inMinutes;
+                              return diffMinutes > 0 ? `${diffMinutes}m` : 'N/A';
+                            })()
+                          : 'N/A'
+                        }
+                      </div>
+                      <div className="text-xs text-gray-500">Duration</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Trade Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <DollarSign className="w-5 h-5" />
+                      Trade Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Entry Price</span>
                       {isEditing ? (
                         <Input
-                          id="entryPrice"
                           type="number"
                           step="0.01"
                           value={editedTrade.entryPrice}
                           onChange={(e) => handleInputChange('entryPrice', parseFloat(e.target.value) || 0)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">${editedTrade.entryPrice.toFixed(2)}</p>
+                        <span className="font-semibold">${editedTrade.entryPrice.toFixed(2)}</span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="exitPrice">Exit Price</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Exit Price</span>
                       {isEditing ? (
                         <Input
-                          id="exitPrice"
                           type="number"
                           step="0.01"
                           value={editedTrade.exitPrice || ''}
                           onChange={(e) => handleInputChange('exitPrice', parseFloat(e.target.value) || undefined)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">
+                        <span className="font-semibold">
                           {editedTrade.exitPrice ? `$${editedTrade.exitPrice.toFixed(2)}` : 'N/A'}
-                        </p>
+                        </span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="quantity">Quantity</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Quantity</span>
                       {isEditing ? (
                         <Input
-                          id="quantity"
                           type="number"
                           value={editedTrade.quantity}
                           onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">{editedTrade.quantity}</p>
+                        <span className="font-semibold">{editedTrade.quantity}</span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="commission">Commission</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Commission</span>
                       {isEditing ? (
                         <Input
-                          id="commission"
                           type="number"
                           step="0.01"
                           value={editedTrade.commission || ''}
                           onChange={(e) => handleInputChange('commission', parseFloat(e.target.value) || 0)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">${(editedTrade.commission || 0).toFixed(2)}</p>
+                        <span className="font-semibold">${(editedTrade.commission || 0).toFixed(2)}</span>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Timing Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
-                    Timing Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="date">Date</Label>
+                {/* Timing Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Clock className="w-5 h-5" />
+                      Timing
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Date</span>
                       {isEditing ? (
                         <Input
-                          id="date"
                           type="date"
                           value={editedTrade.date}
                           onChange={(e) => handleInputChange('date', e.target.value)}
+                          className="w-32 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">{formatDateForTable(editedTrade.date)}</p>
+                        <span className="font-semibold">{formatDateForTable(editedTrade.date)}</span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="timeIn">Time In</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Time In</span>
                       {isEditing ? (
                         <Input
-                          id="timeIn"
                           type="time"
                           value={editedTrade.timeIn}
                           onChange={(e) => handleInputChange('timeIn', e.target.value)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">{editedTrade.timeIn}</p>
+                        <span className="font-semibold">{editedTrade.timeIn}</span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="timeOut">Time Out</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Time Out</span>
                       {isEditing ? (
                         <Input
-                          id="timeOut"
                           type="time"
                           value={editedTrade.timeOut || ''}
                           onChange={(e) => handleInputChange('timeOut', e.target.value || undefined)}
+                          className="w-24 h-8 text-sm"
                         />
                       ) : (
-                        <p className="text-lg font-semibold">{editedTrade.timeOut || 'N/A'}</p>
+                        <span className="font-semibold">{editedTrade.timeOut || 'N/A'}</span>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="timeframe">Timeframe</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Timeframe</span>
                       {isEditing ? (
                         <Select
                           value={editedTrade.timeframe || ''}
                           onValueChange={(value) => handleInputChange('timeframe', value)}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select timeframe" />
+                          <SelectTrigger className="w-24 h-8 text-sm">
+                            <SelectValue placeholder="TF" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1m">1 Minute</SelectItem>
-                            <SelectItem value="5m">5 Minutes</SelectItem>
-                            <SelectItem value="15m">15 Minutes</SelectItem>
-                            <SelectItem value="1h">1 Hour</SelectItem>
-                            <SelectItem value="4h">4 Hours</SelectItem>
-                            <SelectItem value="1d">1 Day</SelectItem>
+                            <SelectItem value="1m">1m</SelectItem>
+                            <SelectItem value="5m">5m</SelectItem>
+                            <SelectItem value="15m">15m</SelectItem>
+                            <SelectItem value="1h">1h</SelectItem>
+                            <SelectItem value="4h">4h</SelectItem>
+                            <SelectItem value="1d">1d</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <p className="text-lg font-semibold">{editedTrade.timeframe || 'Not specified'}</p>
+                        <span className="font-semibold">{editedTrade.timeframe || 'N/A'}</span>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-
-            {/* Performance Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  Performance Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className={`text-3xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-                      {editedTrade.pnl !== undefined ? `${isProfitable ? '+' : ''}$${editedTrade.pnl.toFixed(2)}` : 'N/A'}
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">P&L</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900">
-                      {rMultiple ? `${rMultiple.toFixed(2)}R` : 'N/A'}
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">R-Multiple</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900">
-                      {editedTrade.exitPrice && editedTrade.entryPrice 
-                        ? `${(((editedTrade.exitPrice - editedTrade.entryPrice) / editedTrade.entryPrice) * 100).toFixed(2)}%`
-                        : 'N/A'
-                      }
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">Return %</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900">
-                      {editedTrade.timeOut && editedTrade.timeIn 
-                        ? (() => {
-                            const [inHour, inMin] = editedTrade.timeIn.split(':').map(Number);
-                            const [outHour, outMin] = editedTrade.timeOut!.split(':').map(Number);
-                            const inMinutes = inHour * 60 + inMin;
-                            const outMinutes = outHour * 60 + outMin;
-                            const diffMinutes = outMinutes - inMinutes;
-                            return diffMinutes > 0 ? `${diffMinutes}m` : 'N/A';
-                          })()
-                        : 'N/A'
-                      }
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">Duration</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Risk & Targets Tab */}
@@ -526,21 +572,25 @@ const TradeModal: React.FC<TradeModalProps> = ({ trade, isOpen, onClose }) => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  Chart Screenshots
+                  <FileText className="w-5 h-5" />
+                  Trade Notes
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Chart Screenshot Upload</h3>
-                  <p className="text-gray-600 mb-4">
-                    Drag and drop chart screenshots here, or click to browse
-                  </p>
-                  <Button variant="outline">
-                    Browse Files
-                  </Button>
-                </div>
+                <Label htmlFor="notes">Notes</Label>
+                {isEditing ? (
+                  <Textarea
+                    id="notes"
+                    value={editedTrade.notes || ''}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    placeholder="Add your trade notes, observations, and thoughts here..."
+                    className="min-h-32"
+                  />
+                ) : (
+                  <div className="min-h-32 p-3 border rounded-md bg-gray-50">
+                    {editedTrade.notes || 'No notes added yet.'}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
