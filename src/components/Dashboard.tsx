@@ -8,7 +8,7 @@ import MetricCard from './MetricCard';
 import DayTradesModal from './DayTradesModal';
 import { formatDateForTable } from '../lib/dateUtils';
 import { Trade } from '../types/trade';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 interface DashboardProps {
   onNavigateToJournal?: (date: string) => void;
@@ -21,6 +21,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [chartTimeframe, setChartTimeframe] = useState<'week' | 'month' | 'year'>('month');
 
   const handleTradeClick = (trade: Trade) => {
     setSelectedTrade(trade);
@@ -101,16 +102,56 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
     };
   }, [trades]);
 
-  // Prepare chart data
+  // Prepare chart data based on timeframe
   const chartData = useMemo(() => {
     const closedTrades = trades
       .filter(trade => trade.status === 'closed' && trade.pnl !== undefined)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    if (closedTrades.length === 0) return [];
+
+    const now = new Date();
+    let startDate: Date;
+    
+    // Set date range based on timeframe
+    switch (chartTimeframe) {
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+    }
+
+    // Filter trades within timeframe
+    const filteredTrades = closedTrades.filter(trade => 
+      new Date(trade.date) >= startDate
+    );
+
     let cumulativePnL = 0;
     const dailyData = new Map();
 
-    closedTrades.forEach(trade => {
+    // Fill in all dates in range with zero values
+    const currentDate = new Date(startDate);
+    while (currentDate <= now) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      dailyData.set(dateStr, {
+        date: dateStr,
+        dailyPnL: 0,
+        cumulativePnL: 0,
+        trades: 0,
+        formattedDate: chartTimeframe === 'year' 
+          ? currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          : currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Add actual trade data
+    filteredTrades.forEach(trade => {
       const pnl = (trade.pnl || 0) - (trade.commission || 0);
       cumulativePnL += pnl;
       
@@ -120,20 +161,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
         dailyData.set(date, {
           ...existing,
           dailyPnL: existing.dailyPnL + pnl,
-          cumulativePnL
-        });
-      } else {
-        dailyData.set(date, {
-          date,
-          dailyPnL: pnl,
           cumulativePnL,
-          trades: 1
+          trades: existing.trades + 1
         });
       }
     });
 
-    return Array.from(dailyData.values());
-  }, [trades]);
+    // Update cumulative PnL for all subsequent days
+    const sortedData = Array.from(dailyData.values()).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    let runningTotal = 0;
+    sortedData.forEach(day => {
+      runningTotal += day.dailyPnL;
+      day.cumulativePnL = runningTotal;
+    });
+
+    return sortedData;
+  }, [trades, chartTimeframe]);
 
   if (loading) {
     return (
@@ -259,27 +305,59 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Daily Net Cumulative P&L</h3>
-              <span className="text-sm text-gray-500">ⓘ</span>
+              <div className="flex items-center space-x-2">
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  {(['week', 'month', 'year'] as const).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setChartTimeframe(period)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        chartTimeframe === period
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {period.charAt(0).toUpperCase() + period.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-sm text-gray-500">ⓘ</span>
+              </div>
             </div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={12} />
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorPnL" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="formattedDate" 
+                    fontSize={12}
+                    angle={chartTimeframe === 'year' ? 0 : -45}
+                    textAnchor="end"
+                    height={60}
+                  />
                   <YAxis fontSize={12} />
                   <Tooltip 
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, 'P&L']}
+                    formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Cumulative P&L']}
                     labelFormatter={(label) => `Date: ${label}`}
                   />
-                  <Line 
+                  <Area 
                     type="monotone" 
                     dataKey="cumulativePnL" 
                     stroke="#10b981" 
                     strokeWidth={2}
-                    fill="#10b981"
-                    fillOpacity={0.1}
+                    fill="url(#colorPnL)"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -288,13 +366,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Net Daily P&L</h3>
-              <span className="text-sm text-gray-500">ⓘ</span>
+              <div className="flex items-center space-x-2">
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  {(['week', 'month', 'year'] as const).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setChartTimeframe(period)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        chartTimeframe === period
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {period.charAt(0).toUpperCase() + period.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-sm text-gray-500">ⓘ</span>
+              </div>
             </div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={12} />
+                  <XAxis 
+                    dataKey="formattedDate" 
+                    fontSize={12}
+                    angle={chartTimeframe === 'year' ? 0 : -45}
+                    textAnchor="end"
+                    height={60}
+                  />
                   <YAxis fontSize={12} />
                   <Tooltip 
                     formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Daily P&L']}
