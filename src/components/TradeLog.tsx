@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import MetricCard from './MetricCard';
-import TradeDetailModal from './TradeDetailModal';
-import TradeReviewModal from './TradeReviewModal';
+import TradeModal from './TradeModal';
 import EditTradeModal from './EditTradeModal';
 import { Upload, Edit, Trash2, BarChart3 } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
@@ -12,8 +11,7 @@ const TradeLog: React.FC = () => {
   const { trades, deleteTrade, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   
   const totalPnL = getTotalPnL();
   const winRate = getWinRate();
@@ -34,23 +32,19 @@ const TradeLog: React.FC = () => {
     setEditingTradeId(tradeId);
   };
 
+  // Both purple icon and row click now use the same modal
   const handleReviewTrade = (trade: Trade) => {
     setSelectedTrade(trade);
-    setIsReviewModalOpen(true);
-  };
-
-  const handleCloseReviewModal = () => {
-    setIsReviewModalOpen(false);
-    setSelectedTrade(null);
+    setIsTradeModalOpen(true);
   };
 
   const handleTradeClick = (trade: Trade) => {
     setSelectedTrade(trade);
-    setIsDetailModalOpen(true);
+    setIsTradeModalOpen(true);
   };
 
-  const handleCloseDetailModal = () => {
-    setIsDetailModalOpen(false);
+  const handleCloseTradeModal = () => {
+    setIsTradeModalOpen(false);
     setSelectedTrade(null);
   };
 
@@ -237,16 +231,10 @@ const TradeLog: React.FC = () => {
         </div>
       )}
 
-      <TradeDetailModal 
+      <TradeModal 
         trade={selectedTrade}
-        isOpen={isDetailModalOpen}
-        onClose={handleCloseDetailModal}
-      />
-
-      <TradeReviewModal 
-        trade={selectedTrade}
-        isOpen={isReviewModalOpen}
-        onClose={handleCloseReviewModal}
+        isOpen={isTradeModalOpen}
+        onClose={handleCloseTradeModal}
       />
 
       <EditTradeModal 

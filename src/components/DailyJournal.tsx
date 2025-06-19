@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade } from '../lib/firebaseService';
 import { Calendar, ChevronDown, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
-import TradeReviewModal from './TradeReviewModal';
+import TradeModal from './TradeModal';
 import DailyJournalView from './DailyJournalView';
 
 interface JournalEntry {
@@ -375,7 +375,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
 
       {/* Trade Review Modal */}
       {selectedTrade && (
-        <TradeReviewModal
+        <TradeModal
           trade={selectedTrade}
           isOpen={isReviewModalOpen}
           onClose={handleCloseReviewModal}

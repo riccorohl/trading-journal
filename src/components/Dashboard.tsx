@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTradeContext } from '../contexts/TradeContext';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
-import TradeReviewModal from './TradeReviewModal';
+import TradeModal from './TradeModal';
 import CalendarWidget from './CalendarWidget';
 import MetricCard from './MetricCard';
 import DayTradesModal from './DayTradesModal';
@@ -472,9 +472,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
         </div>
       </div>
 
-      {/* Trade Review Modal */}
+      {/* Trade Modal */}
       {selectedTrade && (
-        <TradeReviewModal
+        <TradeModal
           trade={selectedTrade}
           isOpen={isReviewModalOpen}
           onClose={handleCloseReviewModal}
