@@ -8,7 +8,8 @@ import {
   Plus,
   Upload,
   LogOut,
-  User
+  User,
+  Newspaper
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +28,7 @@ const menuItems = [
   { id: 'journal', label: 'Daily Journal', icon: BookOpen },
   { id: 'trades', label: 'Trades', icon: TrendingUp },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
+  { id: 'news', label: 'News', icon: Newspaper },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
 ];
 
