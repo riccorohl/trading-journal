@@ -2,8 +2,7 @@
 // File: src/lib/screenshotStorage.ts
 
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from './firebase';
-import { auth } from './firebase';
+import { storage, auth } from './firebase';
 
 export interface UploadProgress {
   status: 'uploading' | 'success' | 'error';

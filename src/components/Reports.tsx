@@ -1,195 +1,308 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTradeContext } from '@/contexts/TradeContext';
-import { TrendingUp, TrendingDown, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, DollarSign, BarChart3, Shield, Clock, Activity, Zap } from 'lucide-react';
 import MetricCard from './MetricCard';
-import { 
-  ChartContainer, 
-  ChartTooltip 
-} from '@/components/ui/chart';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid 
-} from 'recharts';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const Reports: React.FC = () => {
-  const { trades } = useTradeContext();
-
-  // Filter only closed trades for analysis
-  const closedTrades = useMemo(() => {
-    return trades.filter(trade => trade.status === 'closed' && trade.pnl !== undefined && trade.pnl !== null);
-  }, [trades]);
-
-  // Calculate key metrics
-  const metrics = useMemo(() => {
-    if (closedTrades.length === 0) {
-      return {
-        totalTrades: 0,
-        winningTrades: 0,
-        losingTrades: 0,
-        winRate: 0,
-        totalPnL: 0,
-        avgWin: 0,
-        avgLoss: 0,
-        profitFactor: 0,
-        totalCommissions: 0,
-        netPnL: 0
-      };
-    }
-
-    const winningTrades = closedTrades.filter(trade => trade.pnl > 0);
-    const losingTrades = closedTrades.filter(trade => trade.pnl < 0);
-    
-    const totalPnL = closedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const totalCommissions = closedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    
-    const grossWins = winningTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const grossLosses = Math.abs(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0));
-    
-    const avgWin = winningTrades.length > 0 ? grossWins / winningTrades.length : 0;
-    const avgLoss = losingTrades.length > 0 ? grossLosses / losingTrades.length : 0;
-
-    return {
-      totalTrades: closedTrades.length,
-      winningTrades: winningTrades.length,
-      losingTrades: losingTrades.length,
-      winRate: closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0,
-      totalPnL,
-      avgWin,
-      avgLoss,
-      profitFactor: grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? 999 : 0,
-      totalCommissions,
-      netPnL: totalPnL - totalCommissions
-    };
-  }, [closedTrades]);
-
-  // Prepare data for equity curve
-  const equityCurveData = useMemo(() => {
-    if (closedTrades.length === 0) return [];
-    
-    const sortedTrades = [...closedTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    let runningBalance = 0;
-    
-    return sortedTrades.map((trade, index) => {
-      runningBalance += trade.pnl - (trade.commission || 0);
-      return {
-        trade: index + 1,
-        balance: runningBalance,
-        date: new Date(trade.date).toLocaleDateString(),
-        symbol: trade.symbol,
-        pnl: trade.pnl
-      };
-    });
-  }, [closedTrades]);
-
-  // Prepare data for monthly performance
-  const monthlyData = useMemo(() => {
-    if (closedTrades.length === 0) return [];
-    
-    const monthlyMap = new Map<string, { pnl: number, trades: number }>();
-    
-    closedTrades.forEach(trade => {
-      const date = new Date(trade.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const existing = monthlyMap.get(monthKey) || { pnl: 0, trades: 0 };
+        const { trades } = useTradeContext();
+        const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('month');
       
-      monthlyMap.set(monthKey, {
-        pnl: existing.pnl + trade.pnl - (trade.commission || 0),
-        trades: existing.trades + 1
-      });
-    });
-    
-    return Array.from(monthlyMap.entries())
-      .sort()
-      .map(([month, data]) => ({
-        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        pnl: data.pnl,
-        trades: data.trades
-      }));
-  }, [closedTrades]);
+        // Filter only closed trades for analysis
+        const closedTrades = useMemo(() => {
+          return trades.filter(trade => trade.status === 'closed' && trade.pnl !== undefined && trade.pnl !== null);
+        }, [trades]);
 
-  // Prepare data for symbol performance
-  const symbolData = useMemo(() => {
-    if (closedTrades.length === 0) return [];
-    
-    const symbolMap = new Map<string, { pnl: number, trades: number, wins: number }>();
-    
-    closedTrades.forEach(trade => {
-      const existing = symbolMap.get(trade.symbol) || { pnl: 0, trades: 0, wins: 0 };
+        // Filter trades by selected time period
+        const filteredTrades = useMemo(() => {
+          const now = new Date();
+          const filterDate = new Date();
+          
+          switch (timePeriod) {
+            case 'day':
+              filterDate.setDate(now.getDate() - 30); // Last 30 days
+              break;
+            case 'week':
+              filterDate.setDate(now.getDate() - 90); // Last ~13 weeks
+              break;
+            case 'month':
+              filterDate.setFullYear(now.getFullYear() - 1); // Last 12 months
+              break;
+          }
+          
+          return closedTrades.filter(trade => new Date(trade.date) >= filterDate);
+        }, [closedTrades, timePeriod]);
       
-      symbolMap.set(trade.symbol, {
-        pnl: existing.pnl + trade.pnl - (trade.commission || 0),
-        trades: existing.trades + 1,
-        wins: existing.wins + (trade.pnl > 0 ? 1 : 0)
-      });
-    });
-    
-    return Array.from(symbolMap.entries())
-      .map(([symbol, data]) => ({
-        symbol,
-        pnl: data.pnl,
-        trades: data.trades,
-        winRate: (data.wins / data.trades) * 100
-      }))
-      .sort((a, b) => b.pnl - a.pnl)
-      .slice(0, 10); // Top 10 symbols
-  }, [closedTrades]);
-
-  // Win/Loss distribution data
-  const winLossData = useMemo(() => {
-    if (closedTrades.length === 0) return [];
-    
-    return [
-      {
-        name: 'Winning Trades',
-        value: metrics.winningTrades,
-        fill: '#10b981'
-      },
-      {
-        name: 'Losing Trades', 
-        value: metrics.losingTrades,
-        fill: '#ef4444'
-      }
-    ];
-  }, [metrics]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(value);
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`;
-  };
-
-  if (closedTrades.length === 0) {
+        // Calculate key metrics
+        const metrics = useMemo(() => {
+          if (filteredTrades.length === 0) {
+            return {
+              totalTrades: 0,
+              winningTrades: 0,
+              losingTrades: 0,
+              winRate: 0,
+              totalPnL: 0,
+              avgWin: 0,
+              avgLoss: 0,
+              profitFactor: 0,
+              totalCommissions: 0,
+              netPnL: 0,
+              maxDrawdown: 0,
+              riskRewardRatio: 0,
+              expectancy: 0,
+              avgHoldingPeriod: 0,
+              tradingFrequency: 0,
+              sharpeRatio: 0,
+              sortinoRatio: 0,
+              calmarRatio: 0,
+              largestWin: 0,
+              largestLoss: 0
+            };
+          }
+      
+          const winningTrades = filteredTrades.filter(trade => trade.pnl > 0);
+          const losingTrades = filteredTrades.filter(trade => trade.pnl < 0);
+          
+          const totalPnL = filteredTrades.reduce((sum, trade) => sum + trade.pnl, 0);
+          const totalCommissions = filteredTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
+          
+          const grossWins = winningTrades.reduce((sum, trade) => sum + trade.pnl, 0);
+          const grossLosses = Math.abs(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0));
+          
+          const avgWin = winningTrades.length > 0 ? grossWins / winningTrades.length : 0;
+          const avgLoss = losingTrades.length > 0 ? grossLosses / losingTrades.length : 0;
+          const winRate = filteredTrades.length > 0 ? (winningTrades.length / filteredTrades.length) * 100 : 0;
+          
+          // Largest win/loss
+          const largestWin = filteredTrades.length > 0 ? Math.max(...filteredTrades.map(t => t.pnl)) : 0;
+          const largestLoss = filteredTrades.length > 0 ? Math.min(...filteredTrades.map(t => t.pnl)) : 0;
+      
+          // Maximum Drawdown
+          let runningPnL = 0;
+          let peak = 0;
+          let maxDrawdown = 0;
+          
+          for (const trade of closedTrades) {
+            runningPnL += trade.pnl;
+            if (runningPnL > peak) {
+              peak = runningPnL;
+            }
+            const drawdown = peak - runningPnL;
+            if (drawdown > maxDrawdown) {
+              maxDrawdown = drawdown;
+            }
+          }
+      
+          // Risk-Reward Ratio
+          const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 999 : 0;
+      
+          // Expectancy
+          const expectancy = filteredTrades.length > 0 ? totalPnL / filteredTrades.length : 0;
+      
+          // Average Holding Period (in hours)
+          const tradesWithDuration = filteredTrades.filter(trade => 
+            trade.timeIn && trade.timeOut && 
+            trade.date && 
+            new Date(`${trade.date} ${trade.timeOut}`) > new Date(`${trade.date} ${trade.timeIn}`)
+          );
+          
+          let avgHoldingPeriod = 0;
+          if (tradesWithDuration.length > 0) {
+            const totalHours = tradesWithDuration.reduce((sum, trade) => {
+              const entryTime = new Date(`${trade.date} ${trade.timeIn}`);
+              const exitTime = new Date(`${trade.date} ${trade.timeOut}`);
+              const durationHours = (exitTime.getTime() - entryTime.getTime()) / (1000 * 60 * 60);
+              return sum + durationHours;
+            }, 0);
+            avgHoldingPeriod = totalHours / tradesWithDuration.length;
+          }
+      
+          // Trading Frequency
+          const tradingFrequency = (() => {
+            if (filteredTrades.length === 0) return 0;
+            
+            const dates = filteredTrades.map(trade => new Date(trade.date)).sort((a, b) => a.getTime() - b.getTime());
+            const firstDate = dates[0];
+            const lastDate = dates[dates.length - 1];
+            const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
+                              (lastDate.getMonth() - firstDate.getMonth()) + 1;
+            
+            return filteredTrades.length / Math.max(monthsDiff, 1);
+          })();
+      
+          // Sharpe Ratio
+          const returns = filteredTrades.map(trade => trade.pnl);
+          const avgReturn = returns.length > 0 ? returns.reduce((sum, ret) => sum + ret, 0) / returns.length : 0;
+          const returnVariance = returns.length > 0 ? 
+            returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length : 0;
+          const returnStdDev = Math.sqrt(returnVariance);
+          const sharpeRatio = returnStdDev > 0 ? avgReturn / returnStdDev : 0;
+      
+          // Sortino Ratio
+          const negativeReturns = returns.filter(ret => ret < avgReturn);
+          const downsideVariance = negativeReturns.length > 0 ?
+      negativeReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / negativeReturns.length : 0;
+          const downsideStdDev = Math.sqrt(downsideVariance);
+          const sortinoRatio = downsideStdDev > 0 ? avgReturn / downsideStdDev : 0;
+      
+          // Calmar Ratio
+          const calmarRatio = maxDrawdown > 0 ? (totalPnL * 12 / Math.max(tradingFrequency * 12, 1)) / maxDrawdown : 0;
+      
+          return {
+            totalTrades: filteredTrades.length,
+            winningTrades: winningTrades.length,
+            losingTrades: losingTrades.length,
+            winRate,
+            totalPnL,
+            avgWin,
+            avgLoss,
+            profitFactor: grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? 999 : 0,
+            totalCommissions,
+            netPnL: totalPnL - totalCommissions,
+            maxDrawdown,
+            riskRewardRatio,
+            expectancy,
+            avgHoldingPeriod,
+            tradingFrequency,
+            sharpeRatio,
+            sortinoRatio,
+            calmarRatio,
+            largestWin,
+            largestLoss
+          };
+        }, [filteredTrades]);
+      
+        // Prepare data for detailed analytics charts
+        const equityCurveData = useMemo(() => {
+          if (filteredTrades.length === 0) return [];
+          
+          const sortedTrades = [...filteredTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          let runningBalance = 0;
+          
+          return sortedTrades.map((trade, index) => {
+            runningBalance += trade.pnl - (trade.commission || 0);
+            return {
+              trade: index + 1,
+              balance: runningBalance,
+              date: new Date(trade.date).toLocaleDateString(),
+              symbol: trade.symbol,
+              pnl: trade.pnl
+            };
+          });
+        }, [filteredTrades]);
+      
+        const timeBasedData = useMemo(() => {
+          if (filteredTrades.length === 0) return [];
+          
+          const dataMap = new Map<string, { pnl: number, trades: number }>();
+          
+          filteredTrades.forEach(trade => {
+            const date = new Date(trade.date);
+            let timeKey: string;
+            
+            switch (timePeriod) {
+              case 'day': {
+                timeKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                break;
+              }
+              case 'week': {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay()); // Start of week
+                timeKey = weekStart.toISOString().split('T')[0];
+                break;
+              }
+              case 'month':
+              default: {
+                timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                break;
+              }
+            }
+            
+            const existing = dataMap.get(timeKey) || { pnl: 0, trades: 0 };
+            
+            dataMap.set(timeKey, {
+              pnl: existing.pnl + trade.pnl - (trade.commission || 0),
+              trades: existing.trades + 1
+            });
+          });
+          
+          return Array.from(dataMap.entries())
+            .sort()
+            .map(([timeKey, data]) => {
+              let displayLabel: string;
+              
+              if (timePeriod === 'week') {
+                const weekStart = new Date(timeKey);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                displayLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+              } else if (timePeriod === 'day') {
+                displayLabel = new Date(timeKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              } else {
+                displayLabel = new Date(timeKey + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+              }
+              
+              return {
+                period: displayLabel,
+                pnl: data.pnl,
+                trades: data.trades
+              };
+            });
+        }, [filteredTrades, timePeriod]);
+      
+        const winLossDistribution = useMemo(() => {
+          if (filteredTrades.length === 0) return [];
+          
+          return [
+            {
+              name: 'Wins',
+              value: metrics.winningTrades,
+              fill: '#10b981'
+            },
+            {
+              name: 'Losses', 
+              value: metrics.losingTrades,
+              fill: '#ef4444'
+            }
+          ];
+        }, [metrics, filteredTrades]);
+      
+        const formatCurrency = (value: number) => {
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+          }).format(value);
+        };
+      
+        const formatPercentage = (value: number) => {
+          return `${value.toFixed(1)}%`;
+        };
+      
+        if (closedTrades.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Trading Reports</h1>
-            <p className="text-gray-600 mt-1">Comprehensive analysis of your trading performance</p>
+            <p className="text-gray-600 mt-1">Deep analysis of your trading performance</p>
           </div>
         </div>
         
         <Card>
           <CardHeader>
-            <CardTitle>No Trading Data Available</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              No Trading Data Available
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Complete some trades to view your performance analytics. Your reports will include win rates, 
-              profit factors, equity curves, and detailed performance breakdowns.
+              Complete some trades to unlock powerful analytics. You'll get detailed insights into your win rates, 
+              profit factors, risk metrics, and performance trends to help optimize your trading strategy.
             </p>
           </CardContent>
         </Card>
@@ -202,263 +315,380 @@ const Reports: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Trading Reports</h1>
-          <p className="text-gray-600 mt-1">Comprehensive analysis of your trading performance</p>
+          <p className="text-gray-600 mt-1">Deep analysis of your trading performance</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Activity className="w-4 h-4" />
+          {metrics.totalTrades} trades analyzed ({timePeriod === 'day' ? 'last 30 days' : timePeriod === 'week' ? 'last 13 weeks' : 'last 12 months'})
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Net P&L"
-          value={formatCurrency(metrics.netPnL)}
-          subtitle={`Gross: ${formatCurrency(metrics.totalPnL)} | Fees: ${formatCurrency(metrics.totalCommissions)}`}
-          color={metrics.netPnL >= 0 ? 'green' : 'red'}
-        />
-        <MetricCard
-          title="Win Rate"
-          value={formatPercentage(metrics.winRate)}
-          subtitle={`${metrics.winningTrades}W / ${metrics.losingTrades}L / ${metrics.totalTrades} Total`}
-          color={metrics.winRate >= 50 ? 'green' : 'red'}
-        />
-        <MetricCard
-          title="Profit Factor"
-          value={metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}
-          subtitle={`Avg Win: ${formatCurrency(metrics.avgWin)} | Avg Loss: ${formatCurrency(metrics.avgLoss)}`}
-          color={metrics.profitFactor >= 1 ? 'green' : 'red'}
-        />
-        <MetricCard
-          title="Total Trades"
-          value={metrics.totalTrades.toString()}
-          subtitle={`${metrics.winningTrades} winners, ${metrics.losingTrades} losers`}
-          color="blue"
-        />
-      </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="detailed" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Detailed Metrics
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Equity Curve */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Equity Curve</CardTitle>
-            <p className="text-sm text-gray-600">Your account balance over time</p>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{
-              balance: { label: "Balance", color: "#2563eb" }
-            }} className="h-64">
-              <LineChart data={equityCurveData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="trade" />
-                <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white p-3 border rounded shadow">
-                          <p className="font-medium">Trade #{label}</p>
-                          <p className="text-sm text-gray-600">{data.date}</p>
-                          <p className="text-sm">Symbol: {data.symbol}</p>
-                          <p className="text-sm">Trade P&L: {formatCurrency(data.pnl)}</p>
-                          <p className="font-medium">Balance: {formatCurrency(data.balance)}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="balance" 
-                  stroke="#2563eb" 
-                  strokeWidth={2}
-                  dot={{ fill: '#2563eb', strokeWidth: 0, r: 3 }}
-                />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Win/Loss Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Win/Loss Distribution</CardTitle>
-            <p className="text-sm text-gray-600">Breakdown of winning vs losing trades</p>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{
-              wins: { label: "Wins", color: "#10b981" },
-              losses: { label: "Losses", color: "#ef4444" }
-            }} className="h-64">
-              <PieChart>
-                <Pie
-                  data={winLossData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                />
-                <ChartTooltip />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Monthly Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Performance</CardTitle>
-            <p className="text-sm text-gray-600">P&L breakdown by month</p>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{
-              pnl: { label: "P&L", color: "#059669" }
-            }} className="h-64">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white p-3 border rounded shadow">
-                          <p className="font-medium">{label}</p>
-                          <p className="text-sm">P&L: {formatCurrency(data.pnl)}</p>
-                          <p className="text-sm">Trades: {data.trades}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar 
-                  dataKey="pnl" 
-                  fill="#059669"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Symbol Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performing Symbols</CardTitle>
-            <p className="text-sm text-gray-600">Performance by trading symbol</p>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{
-              pnl: { label: "P&L", color: "#7c3aed" }
-            }} className="h-64">
-              <BarChart data={symbolData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
-                <YAxis dataKey="symbol" type="category" width={60} />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white p-3 border rounded shadow">
-                          <p className="font-medium">{label}</p>
-                          <p className="text-sm">P&L: {formatCurrency(data.pnl)}</p>
-                          <p className="text-sm">Trades: {data.trades}</p>
-                          <p className="text-sm">Win Rate: {data.winRate.toFixed(1)}%</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar 
-                  dataKey="pnl" 
-                  fill="#7c3aed"
-                  radius={[0, 4, 4, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Summary Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Trading Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Trades:</span>
-                <span className="font-medium">{metrics.totalTrades}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Win Rate:</span>
-                <span className="font-medium">{formatPercentage(metrics.winRate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Profit Factor:</span>
-                <span className="font-medium">{metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}</span>
-              </div>
+        {/* Overview Tab - Now shows visual charts and insights */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Time Period Filter Tabs */}
+          <div className="flex justify-start">
+            <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+              <button
+                onClick={() => setTimePeriod('day')}
+                className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  timePeriod === 'day' ? 'bg-background text-foreground shadow-sm' : ''
+                }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => setTimePeriod('week')}
+                className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  timePeriod === 'week' ? 'bg-background text-foreground shadow-sm' : ''
+                }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setTimePeriod('month')}
+                className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  timePeriod === 'month' ? 'bg-background text-foreground shadow-sm' : ''
+                }`}
+              >
+                Monthly
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Win/Loss Analysis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Winning Trades:</span>
-                <span className="font-medium text-green-600">{metrics.winningTrades}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Losing Trades:</span>
-                <span className="font-medium text-red-600">{metrics.losingTrades}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Average Win:</span>
-                <span className="font-medium text-green-600">{formatCurrency(metrics.avgWin)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Average Loss:</span>
-                <span className="font-medium text-red-600">{formatCurrency(metrics.avgLoss)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Show message if no data for selected period */}
+          {filteredTrades.length === 0 && closedTrades.length > 0 && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-gray-500">
+                  No trades found for the selected {timePeriod === 'day' ? 'daily' : timePeriod === 'week' ? 'weekly' : 'monthly'} period.
+                  <br />
+                  Try selecting a different time range or add more trades.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Gross P&L:</span>
-                <span className="font-medium">{formatCurrency(metrics.totalPnL)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Commissions:</span>
-                <span className="font-medium text-red-600">{formatCurrency(metrics.totalCommissions)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Net P&L:</span>
-                <span className={`font-medium ${metrics.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(metrics.netPnL)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Key Insights - Prime spot for AI-powered insights for paid users */}
+          {filteredTrades.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  AI Trading Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Performance Analysis</h4>
+                      <p className="text-sm text-gray-600">
+                        {metrics.winRate >= 50 
+                          ? `Strong win rate of ${formatPercentage(metrics.winRate)} indicates good trade selection.`
+                          : `Win rate of ${formatPercentage(metrics.winRate)} suggests room for improvement in trade selection.`
+                        }
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Risk Management</h4>
+                      <p className="text-sm text-gray-600">
+                        {metrics.riskRewardRatio >= 2 
+                          ? `Excellent risk/reward ratio of ${metrics.riskRewardRatio.toFixed(2)}:1 shows disciplined risk management.`
+                          : `Risk/reward ratio of ${metrics.riskRewardRatio.toFixed(2)}:1 could be improved with better position sizing.`
+                        }
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Drawdown Control</h4>
+                      <p className="text-sm text-gray-600">
+                        {metrics.maxDrawdown <= Math.abs(metrics.totalPnL * 0.15)
+                          ? `Well-controlled drawdown of ${formatCurrency(metrics.maxDrawdown)} shows good risk management.`
+                          : `Consider reducing position sizes to limit drawdown below ${formatCurrency(Math.abs(metrics.totalPnL * 0.15))}.`
+                        }
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Trading Efficiency</h4>
+                      <p className="text-sm text-gray-600">
+                        {metrics.expectancy > 0 
+                          ? `Positive expectancy of ${formatCurrency(metrics.expectancy)} per trade indicates a profitable system.`
+                          : `Negative expectancy suggests need to review strategy and improve trade selection.`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Equity Curve */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Equity Curve
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    balance: {
+                      label: "Balance",
+                      color: "hsl(var(--chart-1))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <LineChart data={equityCurveData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="trade" />
+                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                    <ChartTooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-3 border rounded shadow">
+                              <p className="font-medium">Trade #{label}</p>
+                              <p className="text-sm text-gray-600">{data.date}</p>
+                              <p className="text-sm text-gray-600">{data.symbol}</p>
+                              <p className={`text-sm font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                P&L: {formatCurrency(data.pnl)}
+                              </p>
+                              <p className="text-sm font-medium">
+                                Balance: {formatCurrency(data.balance)}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="balance" 
+                      stroke="var(--color-balance)" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Win/Loss Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Win/Loss Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    wins: {
+                      label: "Wins",
+                      color: "#10b981",
+                    },
+                    losses: {
+                      label: "Losses",
+                      color: "#ef4444",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <PieChart>
+                    <Pie
+                      data={winLossDistribution}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    />
+                    <ChartTooltip />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Performance by Time Period */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                {timePeriod === 'day' ? 'Daily' : timePeriod === 'week' ? 'Weekly' : 'Monthly'} Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  pnl: {
+                    label: "P&L",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-[400px]"
+              >
+                <BarChart data={timeBasedData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" />
+                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <ChartTooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 border rounded shadow">
+                            <p className="font-medium">{label}</p>
+                            <p className={`text-sm font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              P&L: {formatCurrency(data.pnl)}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Trades: {data.trades}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="pnl" 
+                    fill="var(--color-pnl)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+
+        </TabsContent>
+
+        {/* Detailed Metrics Tab - Now shows all the metric cards */}
+        <TabsContent value="detailed" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Core Performance Metrics */}
+            <MetricCard
+              title="Net P&L"
+              value={formatCurrency(metrics.netPnL)}
+              subtitle={`Gross: ${formatCurrency(metrics.totalPnL)}`}
+              color={metrics.netPnL >= 0 ? 'green' : 'red'}
+              icon={<DollarSign className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Win Rate"
+              value={formatPercentage(metrics.winRate)}
+              subtitle={`${metrics.winningTrades}W / ${metrics.losingTrades}L`}
+              color={metrics.winRate >= 50 ? 'green' : 'red'}
+              icon={<Target className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Profit Factor"
+              value={metrics.profitFactor === 999 ? '∞' : metrics.profitFactor.toFixed(2)}
+              subtitle={`${formatCurrency(metrics.avgWin)} avg win`}
+              color={metrics.profitFactor >= 1.5 ? 'green' : metrics.profitFactor >= 1 ? 'yellow' : 'red'}
+              icon={<TrendingUp className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Total Trades"
+              value={metrics.totalTrades.toString()}
+              subtitle={`${metrics.tradingFrequency.toFixed(1)} per month`}
+              color="blue"
+              icon={<Activity className="w-5 h-5" />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Risk Metrics */}
+            <MetricCard
+              title="Max Drawdown"
+              value={formatCurrency(metrics.maxDrawdown)}
+              subtitle="Peak to trough decline"
+              color={metrics.maxDrawdown > Math.abs(metrics.totalPnL * 0.2) ? 'red' : 'green'}
+              icon={<TrendingDown className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Risk/Reward Ratio"
+              value={metrics.riskRewardRatio === 999 ? '∞' : metrics.riskRewardRatio.toFixed(2)}
+              subtitle={`Avg loss: ${formatCurrency(metrics.avgLoss)}`}
+              color={metrics.riskRewardRatio >= 2 ? 'green' : metrics.riskRewardRatio >= 1.5 ? 'yellow' : 'red'}
+              icon={<Shield className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Expectancy"
+              value={formatCurrency(metrics.expectancy)}
+              subtitle="Expected value per trade"
+              color={metrics.expectancy > 0 ? 'green' : 'red'}
+              icon={<Target className="w-5 h-5" />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Advanced Metrics */}
+            <MetricCard
+              title="Sharpe Ratio"
+              value={metrics.sharpeRatio.toFixed(2)}
+              subtitle="Risk-adjusted return"
+              color={metrics.sharpeRatio > 1 ? 'green' : metrics.sharpeRatio > 0.5 ? 'yellow' : 'red'}
+            />
+            <MetricCard
+              title="Sortino Ratio"
+              value={metrics.sortinoRatio.toFixed(2)}
+              subtitle="Downside risk-adjusted"
+              color={metrics.sortinoRatio > 1.5 ? 'green' : metrics.sortinoRatio > 1 ? 'yellow' : 'red'}
+            />
+            <MetricCard
+              title="Largest Win"
+              value={formatCurrency(metrics.largestWin)}
+              subtitle="Best single trade"
+              color="green"
+            />
+            <MetricCard
+              title="Largest Loss"
+              value={formatCurrency(metrics.largestLoss)}
+              subtitle="Worst single trade"
+              color="red"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Trading Behavior */}
+            <MetricCard
+              title="Avg Hold Time"
+              value={metrics.avgHoldingPeriod > 0 ? `${metrics.avgHoldingPeriod.toFixed(1)}h` : 'N/A'}
+              subtitle="Average trade duration"
+              color="blue"
+              icon={<Clock className="w-5 h-5" />}
+            />
+            <MetricCard
+              title="Total Commissions"
+              value={formatCurrency(metrics.totalCommissions)}
+              subtitle={`${((metrics.totalCommissions / Math.abs(metrics.totalPnL)) * 100).toFixed(1)}% of gross P&L`}
+              color="blue"
+              icon={<DollarSign className="w-5 h-5" />}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

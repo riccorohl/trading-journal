@@ -7,8 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "check-all": "npm run type-check && npm run lint",
+    "verify": "npm run type-check && npm run lint && npm run build",
+    "strict-verify": "npm run lint && npm run type-check && npm run build --mode development && npm run dev --port 8081 --open false &",
+    "session-start": "npm run lint && echo 'Session Start Check: All linting passed'",
+    "pre-commit": "npm run lint:fix && npm run type-check && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

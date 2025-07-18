@@ -107,7 +107,7 @@ export const authService = {
   },
 
   // Create user profile in Firestore
-  async createUserProfile(user: User, additionalData?: any): Promise<void> {
+  async createUserProfile(user: User, additionalData?: { displayName?: string; [key: string]: unknown }): Promise<void> {
     try {
       const userProfile: UserProfile = {
         uid: user.uid,

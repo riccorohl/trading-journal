@@ -9,7 +9,10 @@ import { DataMigrationService } from '../lib/dataMigration';
 
 const SetupStatus: React.FC = () => {
   const [firebaseConfigured, setFirebaseConfigured] = useState(false);
-  const [migrationData, setMigrationData] = useState<any>(null);
+  const [migrationData, setMigrationData] = useState<{
+    trades: unknown[];
+    metadata: Record<string, unknown>;
+  } | null>(null);
   const [showBackup, setShowBackup] = useState(false);
   const { user } = useAuth();
 

@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTradeContext } from '../contexts/TradeContext';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
-import TradeModal from './TradeModal';
 import CalendarWidget from './CalendarWidget';
 import MetricCard from './MetricCard';
 import DayTradesModal from './DayTradesModal';
 import { formatDateForTable } from '../lib/dateUtils';
 import { Trade } from '../types/trade';
+import { addSampleTrades, removeSampleTrades, hasSampleTrades } from '../lib/sampleData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 interface DashboardProps {
@@ -15,22 +16,17 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { trades, loading } = useTradeContext();
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [chartTimeframe, setChartTimeframe] = useState<'week' | 'month' | 'year'>('month');
+  const [sampleDataLoading, setSampleDataLoading] = useState(false);
+  const [showSampleDataOption, setShowSampleDataOption] = useState(false);
 
   const handleTradeClick = (trade: Trade) => {
-    setSelectedTrade(trade);
-    setIsReviewModalOpen(true);
-  };
-
-  const handleCloseReviewModal = () => {
-    setIsReviewModalOpen(false);
-    setSelectedTrade(null);
+    navigate(`/trade/${trade.id}`);
   };
 
   const handleDateClick = (date: string) => {
@@ -44,10 +40,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   };
 
   const handleDayTradeClick = (trade: Trade) => {
-    // Close day modal and open trade review modal
+    // Close day modal and navigate to trade details
     setIsDayModalOpen(false);
-    setSelectedTrade(trade);
-    setIsReviewModalOpen(true);
+    navigate(`/trade/${trade.id}`);
+  };
+
+  // Check if we should show sample data option
+  useEffect(() => {
+    const checkSampleDataStatus = async () => {
+      if (user && trades.length === 0) {
+        const hasSamples = await hasSampleTrades(user.uid);
+        setShowSampleDataOption(!hasSamples);
+      } else {
+        setShowSampleDataOption(false);
+      }
+    };
+
+    checkSampleDataStatus();
+  }, [user, trades.length]);
+
+  // Handle loading sample data
+  const handleLoadSampleData = async () => {
+    if (!user) return;
+    
+    setSampleDataLoading(true);
+    try {
+      await addSampleTrades(user.uid);
+      setShowSampleDataOption(false);
+      // Show success message or toast here if desired
+    } catch (error) {
+      console.error('Error loading sample data:', error);
+      // Show error message or toast here if desired
+    } finally {
+      setSampleDataLoading(false);
+    }
   };
 
   // Calculate metrics
@@ -457,7 +483,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                No trades yet. Start by adding your first trade!
+                <div className="mb-4">
+                  <p className="text-lg mb-2">No trades yet!</p>
+                  <p className="text-sm">Start by adding your first trade or load sample data to explore features.</p>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleLoadSampleData}
+                    disabled={sampleDataLoading}
+                    className="inline-flex items-center px-4 py-2 border border-purple-300 rounded-md shadow-sm text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {sampleDataLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
+                        Loading Sample Data...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Load 10 Sample Forex Trades
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-400">Sample data can be deleted anytime</p>
+                </div>
               </div>
             )}
           </div>
@@ -471,15 +522,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           </div>
         </div>
       </div>
-
-      {/* Trade Modal */}
-      {selectedTrade && (
-        <TradeModal
-          trade={selectedTrade}
-          isOpen={isReviewModalOpen}
-          onClose={handleCloseReviewModal}
-        />
-      )}
 
       {/* Day Trades Modal */}
       {isDayModalOpen && (

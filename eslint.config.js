@@ -24,6 +24,17 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      
+      // CRITICAL: Duplicate Prevention Rules
+      "no-duplicate-imports": "error",
+      "no-redeclare": "error",
+      "no-dupe-keys": "error",
+      "no-dupe-class-members": "error",
+      
+      // Enhanced TypeScript Rules
+      "@typescript-eslint/no-explicit-any": "error",
+      
+      // Import Organization removed - too aggressive for existing codebase
     },
   }
 );

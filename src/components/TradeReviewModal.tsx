@@ -344,14 +344,9 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  // Don't render if trade is null - MUST be before any hooks
-  if (!trade) {
-    return null;
-  }
-
-  const [notes, setNotes] = useState(trade.notes || '');
-  const [analysis, setAnalysis] = useState(trade.analysis || '');
-  const [lessons, setLessons] = useState(trade.lessons || '');
+  const [notes, setNotes] = useState(trade?.notes || '');
+  const [analysis, setAnalysis] = useState(trade?.analysis || '');
+  const [lessons, setLessons] = useState(trade?.lessons || '');
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -369,6 +364,11 @@ const TradeReviewModal: React.FC<TradeReviewModalProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
+
+  // Early return after all hooks
+  if (!trade) {
+    return null;
+  }
 
   const rMultiple = trade.pnl && trade.stopLoss 
     ? Math.abs(trade.pnl / (Math.abs(trade.entryPrice - trade.stopLoss) * trade.quantity))

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Dashboard from '../components/Dashboard';
 import AddTrade from '../components/AddTrade';
@@ -8,13 +9,48 @@ import Playbooks from '../components/Playbooks';
 import Reports from '../components/Reports';
 import News from '../components/NewsNew';
 import ImportTrades from '../components/ImportTrades';
+import EAIntegration from '../components/EAIntegration';
+import TradeDetailsPage from './TradeDetailsPage';
+import SettingsPage from './SettingsPage';
 
 const Index: React.FC = () => {
+  const { tradeId } = useParams<{ tradeId?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showAddTrade, setShowAddTrade] = useState(false);
   const [showImportTrades, setShowImportTrades] = useState(false);
 
+  // Handle URL changes for special pages
+  useEffect(() => {
+    if (tradeId) {
+      setCurrentPage('trade-details');
+      setShowAddTrade(false);
+      setShowImportTrades(false);
+    } else if (location.pathname === '/settings') {
+      setCurrentPage('settings');
+      setShowAddTrade(false);
+      setShowImportTrades(false);
+    } else if (location.pathname === '/') {
+      // Reset to dashboard when on home page
+      setCurrentPage('dashboard');
+      setShowAddTrade(false);
+      setShowImportTrades(false);
+    }
+  }, [tradeId, location.pathname]);
+
   const handlePageChange = (page: string) => {
+    // Handle URL navigation for special pages
+    if (page === 'settings') {
+      navigate('/settings');
+      return;
+    }
+    
+    // If navigating away from trade details or settings, update URL
+    if ((tradeId && page !== 'trade-details') || (location.pathname === '/settings' && page !== 'settings')) {
+      navigate('/');
+    }
+    
     setCurrentPage(page);
     setShowAddTrade(false);
     setShowImportTrades(false);
@@ -60,8 +96,14 @@ const Index: React.FC = () => {
         return <Reports />;
       case 'news':
         return <News />;
+      case 'ea-integration':
+        return <EAIntegration />;
       case 'playbooks':
         return <Playbooks />;
+      case 'trade-details':
+        return tradeId ? <TradeDetailsPage isEmbedded={true} /> : <TradeLog />;
+      case 'settings':
+        return <SettingsPage />;
       default:
         return <Dashboard />;
     }
@@ -70,7 +112,7 @@ const Index: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar 
-        currentPage={showAddTrade ? 'add-trade' : showImportTrades ? 'import-trades' : currentPage} 
+        currentPage={showAddTrade ? 'add-trade' : showImportTrades ? 'import-trades' : tradeId ? 'trades' : currentPage} 
         onPageChange={handlePageChange}
         onAddTrade={handleAddTrade}
         onImportTrades={handleImportTrades}

@@ -53,7 +53,7 @@ const convertTradeToFirestore = (trade: Omit<Trade, 'id'>) => {
       acc[key] = value;
     }
     return acc;
-  }, {} as any);
+  }, {} as Record<string, unknown>);
 
   return {
     ...cleanedTrade,

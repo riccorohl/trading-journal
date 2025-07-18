@@ -63,24 +63,25 @@ export const economicCalendarProxy = functions.https.onRequest((req, res) => {
       });
       res.status(200).send(response.data);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching economic calendar:', error);
       
       // Determine error type and provide appropriate response
-      if (error?.code === 'ECONNABORTED') {
+      if (error instanceof Error && 'code' in error && error.code === 'ECONNABORTED') {
         res.status(408).json({ 
           error: 'Request timeout - MyFXBook service is slow to respond',
           details: 'Please try again in a moment'
         });
-      } else if (error?.response) {
-        res.status(error.response.status).json({ 
+      } else if (error && typeof error === 'object' && 'response' in error) {
+        const response = (error as { response?: { status?: number; statusText?: string } }).response;
+        res.status(response?.status || 500).json({ 
           error: 'MyFXBook service error',
-          details: error.response.statusText 
+          details: response?.statusText || 'Service error'
         });
       } else {
         res.status(500).json({ 
           error: 'Failed to fetch economic calendar data',
-          details: error?.message || 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }

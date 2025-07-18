@@ -45,7 +45,7 @@ export class DataMigrationService {
     }
   }
 
-  private static getLocalJournalEntries(): any[] {
+  private static getLocalJournalEntries(): unknown[] {
     try {
       const journalData = localStorage.getItem(this.STORAGE_KEYS.JOURNAL);
       return journalData ? JSON.parse(journalData) : [];
@@ -55,7 +55,7 @@ export class DataMigrationService {
     }
   }
 
-  private static getLocalPlaybooks(): any[] {
+  private static getLocalPlaybooks(): unknown[] {
     try {
       const playbooksData = localStorage.getItem(this.STORAGE_KEYS.PLAYBOOKS);
       return playbooksData ? JSON.parse(playbooksData) : [];

@@ -91,11 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      await authService.resetPassword(email);
-    } catch (error) {
-      throw error;
-    }
+    await authService.resetPassword(email);
   };
 
   const value = {

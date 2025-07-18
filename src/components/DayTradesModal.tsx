@@ -18,8 +18,6 @@ const DayTradesModal: React.FC<DayTradesModalProps> = ({
   trades,
   onTradeClick
 }) => {
-  if (!isOpen) return null;
-
   // Calculate day metrics
   const dayMetrics = React.useMemo(() => {
     const closedTrades = trades.filter(trade => trade.status === 'closed');
@@ -44,6 +42,8 @@ const DayTradesModal: React.FC<DayTradesModalProps> = ({
       losingTrades: losingTrades.length
     };
   }, [trades]);
+
+  if (!isOpen) return null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

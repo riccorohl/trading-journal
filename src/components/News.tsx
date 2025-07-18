@@ -65,7 +65,7 @@ const News: React.FC = () => {
     // For testing, let's try a wider date range that's more likely to have events
     const dateRange = viewType === 'today' ? getWeekRange() : getWeekRange(); // Use week range for both for now
     loadEconomicEvents(dateRange.start, dateRange.end);
-  }, [viewType]);
+  }, []);
 
   const getImpactColor = (impact: string) => {
     switch (impact) {

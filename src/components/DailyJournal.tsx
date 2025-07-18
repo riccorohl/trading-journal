@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTradeContext } from '../contexts/TradeContext';
 import { Trade } from '../lib/firebaseService';
 import { Calendar, ChevronDown, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
-import TradeModal from './TradeModal';
 import DailyJournalView from './DailyJournalView';
 
 interface JournalEntry {
@@ -23,13 +23,12 @@ interface DailyJournalProps {
 }
 
 const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
+  const navigate = useNavigate();
   const { trades } = useTradeContext();
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showJournalView, setShowJournalView] = useState(false);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // Auto-open the selected date from calendar
   useEffect(() => {
@@ -163,13 +162,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
   };
 
   const handleTradeClick = (trade: Trade) => {
-    setSelectedTrade(trade);
-    setIsReviewModalOpen(true);
-  };
-
-  const handleCloseReviewModal = () => {
-    setIsReviewModalOpen(false);
-    setSelectedTrade(null);
+    navigate(`/trade/${trade.id}`);
   };
 
   const handleCloseJournalView = () => {
@@ -373,14 +366,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
         )}
       </div>
 
-      {/* Trade Review Modal */}
-      {selectedTrade && (
-        <TradeModal
-          trade={selectedTrade}
-          isOpen={isReviewModalOpen}
-          onClose={handleCloseReviewModal}
-        />
-      )}
+
     </div>
   );
 };

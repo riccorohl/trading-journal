@@ -3,7 +3,13 @@
 
 declare global {
   interface Window {
-    gapi: any;
+    gapi: {
+      load: (api: string, callback: () => void) => void;
+      client: {
+        init: (config: Record<string, unknown>) => Promise<void>;
+        drive: Record<string, unknown>;
+      };
+    };
   }
 }
 

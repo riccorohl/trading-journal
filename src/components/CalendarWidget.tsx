@@ -4,7 +4,11 @@ import { ChevronLeft, ChevronRight, Settings, Info } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
 
 interface CalendarWidgetProps {
-  trades: any[];
+  trades: Array<{
+    date: string;
+    status: string;
+    pnl?: number;
+  }>;
   onDateClick?: (date: string) => void;
 }
 

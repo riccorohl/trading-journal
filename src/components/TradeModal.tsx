@@ -70,7 +70,7 @@ const TradeModal: React.FC<TradeModalProps> = ({ trade, isOpen, onClose }) => {
     setIsEditing(false);
   };
 
-  const handleInputChange = (field: keyof Trade, value: any) => {
+  const handleInputChange = (field: keyof Trade, value: string | number | Date) => {
     setEditedTrade(prev => prev ? { ...prev, [field]: value } : null);
   };
 

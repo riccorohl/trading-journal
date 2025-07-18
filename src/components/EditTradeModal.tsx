@@ -97,7 +97,7 @@ const EditTradeModal: React.FC<EditTradeModalProps> = ({
     }
   };
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | number | Date) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

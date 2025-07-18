@@ -35,8 +35,8 @@ const AuthForm: React.FC = () => {
 
     try {
       await signIn(loginData.email, loginData.password);
-    } catch (error: any) {
-      setError(error.message || 'Failed to sign in');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to sign in');
     } finally {
       setIsLoading(false);
     }
@@ -62,8 +62,8 @@ const AuthForm: React.FC = () => {
     try {
       await signUp(signupData.email, signupData.password, signupData.displayName);
       setSuccess('Account created successfully! Please sign in.');
-    } catch (error: any) {
-      setError(error.message || 'Failed to create account');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to create account');
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +75,8 @@ const AuthForm: React.FC = () => {
 
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      setError(error.message || 'Failed to sign in with Google');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to sign in with Google');
     } finally {
       setIsLoading(false);
     }
@@ -92,8 +92,8 @@ const AuthForm: React.FC = () => {
       await resetPassword(resetEmail);
       setSuccess('Password reset email sent! Check your inbox.');
       setResetEmail('');
-    } catch (error: any) {
-      setError(error.message || 'Failed to send reset email');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to send reset email');
     } finally {
       setIsLoading(false);
     }

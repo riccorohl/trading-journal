@@ -9,7 +9,9 @@ import {
   Upload,
   LogOut,
   User,
-  Newspaper
+  Newspaper,
+  Zap,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +31,7 @@ const menuItems = [
   { id: 'trades', label: 'Trades', icon: TrendingUp },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
   { id: 'news', label: 'News', icon: Newspaper },
+  { id: 'ea-integration', label: 'EA Integration', icon: Zap },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
 ];
 
@@ -113,6 +116,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade
               {user?.email}
             </p>
           </div>
+          <button
+            onClick={() => onPageChange('settings')}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
         </div>
         
         <Button

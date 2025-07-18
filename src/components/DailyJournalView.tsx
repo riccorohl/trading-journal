@@ -94,8 +94,8 @@ export default function DailyJournalView({ selectedDate, onClose }: DailyJournal
       const savedData = localStorage.getItem(`journal_${dateKey}`);
       if (savedData) {
         const data = JSON.parse(savedData);
-        setPreSession(data.preSession || preSession);
-        setPostSession(data.postSession || postSession);
+        setPreSession(prevState => data.preSession || prevState);
+        setPostSession(prevState => data.postSession || prevState);
       }
     };
     loadJournalData();
@@ -245,7 +245,7 @@ export default function DailyJournalView({ selectedDate, onClose }: DailyJournal
                     />
                     <select
                       value={newEvent.impact}
-                      onChange={(e) => setNewEvent({ ...newEvent, impact: e.target.value as any })}
+                      onChange={(e) => setNewEvent({ ...newEvent, impact: e.target.value as NewsEvent['impact'] })}
                       className="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     >
                       <option value="low">Low</option>
