@@ -49,20 +49,26 @@ const TradeLog: React.FC = () => {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const searchableFields = [
-          trade.symbol?.toLowerCase() || '',
+          trade.currencyPair?.toLowerCase() || '',
           trade.side?.toLowerCase() || '',
           trade.status?.toLowerCase() || '',
           trade.date || '',
           trade.entryPrice?.toString() || '',
           trade.exitPrice?.toString() || '',
-          trade.quantity?.toString() || '',
+          trade.lotSize?.toString() || '',
+          trade.lotType?.toLowerCase() || '',
+          trade.pips?.toString() || '',
+          trade.spread?.toString() || '',
+          trade.session?.toLowerCase() || '',
           trade.pnl?.toString() || '',
           trade.commission?.toString() || '',
+          trade.swap?.toString() || '',
           trade.notes?.toLowerCase() || '',
           trade.strategy?.toLowerCase() || '',
           trade.timeIn || '',
           trade.timeOut || '',
-          // Add any other trade fields that exist
+          trade.accountCurrency?.toLowerCase() || '',
+          // Add other forex-specific fields
         ].join(' ');
         
         if (!searchableFields.includes(query)) {
@@ -70,8 +76,8 @@ const TradeLog: React.FC = () => {
         }
       }
       
-      // Symbol filter
-      if (filters.symbol && !trade.symbol.toLowerCase().includes(filters.symbol.toLowerCase())) {
+      // Currency Pair filter
+      if (filters.symbol && !trade.currencyPair?.toLowerCase().includes(filters.symbol.toLowerCase())) {
         return false;
       }
       
@@ -265,14 +271,14 @@ const TradeLog: React.FC = () => {
                   </div>
 
                   <div className="space-y-4">
-                    {/* Symbol Filter */}
+                    {/* Currency Pair Filter */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Symbol
+                        Currency Pair
                       </label>
                       <input
                         type="text"
-                        placeholder="Search symbols..."
+                        placeholder="Search currency pairs..."
                         value={filters.symbol}
                         onChange={(e) => setFilters(prev => ({ ...prev, symbol: e.target.value }))}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -431,7 +437,7 @@ const TradeLog: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Symbol
+                    Currency Pair
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
@@ -446,7 +452,10 @@ const TradeLog: React.FC = () => {
                     Exit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
+                    Lot Size
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Pips
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     P&L
@@ -467,7 +476,7 @@ const TradeLog: React.FC = () => {
                     onClick={() => handleTradeClick(trade)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {trade.symbol}
+                      {trade.currencyPair || '--'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDateForTable(trade.date)}
@@ -482,18 +491,30 @@ const TradeLog: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${trade.entryPrice.toFixed(2)}
+                      {trade.entryPrice ? trade.entryPrice.toFixed(5) : '--'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.exitPrice ? `$${trade.exitPrice.toFixed(2)}` : '--'}
+                      {trade.exitPrice ? trade.exitPrice.toFixed(5) : '--'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.quantity}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{trade.lotSize || '--'}</span>
+                        <span className="text-xs text-gray-500 capitalize">{trade.lotType || ''}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {trade.pips !== undefined ? (
+                        <span className={`font-medium ${trade.pips >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+                        </span>
+                      ) : (
+                        '--'
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {trade.pnl !== undefined ? (
                         <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          ${trade.pnl.toFixed(2)}
+                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
                         </span>
                       ) : (
                         '--'

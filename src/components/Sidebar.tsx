@@ -5,12 +5,11 @@ import {
   TrendingUp, 
   BarChart3,
   Play,
+  Calculator,
   Plus,
   Upload,
   LogOut,
   User,
-  Newspaper,
-  Zap,
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,12 +26,11 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'journal', label: 'Daily Journal', icon: BookOpen },
+  { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'trades', label: 'Trades', icon: TrendingUp },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'news', label: 'News', icon: Newspaper },
-  { id: 'ea-integration', label: 'EA Integration', icon: Zap },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
+  { id: 'tools', label: 'Tools', icon: Calculator },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, onAddTrade, onImportTrades }) => {

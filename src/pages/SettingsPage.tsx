@@ -17,7 +17,8 @@ import {
   Trash2,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -109,6 +110,10 @@ const SettingsPage: React.FC = () => {
               <Button variant="ghost" className="w-full justify-start">
                 <Database className="w-4 h-4 mr-2" />
                 Data Management
+              </Button>
+              <Button variant="ghost" className="w-full justify-start">
+                <Zap className="w-4 h-4 mr-2" />
+                EA Integration
               </Button>
             </CardContent>
           </Card>
@@ -416,6 +421,111 @@ const SettingsPage: React.FC = () => {
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Account
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* EA Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                EA Integration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">Expert Advisor Integration</h4>
+                <p className="text-sm text-blue-600">
+                  Connect your MetaTrader Expert Advisors to automatically sync trades and performance data.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="mt4-connection">MetaTrader 4 Connection</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      id="mt4-connection"
+                      placeholder="Server:Port (e.g., localhost:8080)"
+                      className="flex-1"
+                    />
+                    <Button variant="outline">
+                      Test Connection
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter your MT4 server details to establish connection
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="mt5-connection">MetaTrader 5 Connection</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      id="mt5-connection"
+                      placeholder="Server:Port (e.g., localhost:8081)"
+                      className="flex-1"
+                    />
+                    <Button variant="outline">
+                      Test Connection
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter your MT5 server details to establish connection
+                  </p>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Auto-sync Trades</Label>
+                      <p className="text-sm text-gray-500">Automatically import trades from connected EAs</p>
+                    </div>
+                    <Switch />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Real-time Updates</Label>
+                      <p className="text-sm text-gray-500">Receive live trade updates from EAs</p>
+                    </div>
+                    <Switch />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Performance Sync</Label>
+                      <p className="text-sm text-gray-500">Sync EA performance metrics with journal</p>
+                    </div>
+                    <Switch />
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Setup Instructions</h4>
+                  <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
+                    <li>Install the Zella Trade Scribe EA in your MetaTrader platform</li>
+                    <li>Configure the EA with your journal API key</li>
+                    <li>Enable auto-trading and confirm EA is running</li>
+                    <li>Test the connection using the buttons above</li>
+                  </ol>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download MT4 EA
+                  </Button>
+                  <Button variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download MT5 EA
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

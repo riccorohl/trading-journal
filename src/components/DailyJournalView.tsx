@@ -160,7 +160,7 @@ export default function DailyJournalView({ selectedDate, onClose }: DailyJournal
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-                Daily Journal
+                Journal
               </h1>
             </div>
             <div className="flex items-center gap-4">

@@ -175,6 +175,93 @@ const Reports: React.FC = () => {
           };
         }, [filteredTrades]);
       
+        // Forex-specific analytics data
+        const forexAnalytics = useMemo(() => {
+          if (filteredTrades.length === 0) return {
+            currencyPairData: [],
+            sessionData: [],
+            pipAnalysis: {},
+            spreadCosts: 0,
+            swapCosts: 0,
+            baseCurrencyData: [],
+            quoteCurrencyData: []
+          };
+
+          // Currency Pair Performance Analysis
+          const pairMap = new Map<string, { trades: number; wins: number; totalPnL: number; totalPips: number; avgSpread: number }>();
+          
+          filteredTrades.forEach(trade => {
+            const pair = trade.currencyPair || 'Unknown';
+            const existing = pairMap.get(pair) || { trades: 0, wins: 0, totalPnL: 0, totalPips: 0, avgSpread: 0 };
+            
+            pairMap.set(pair, {
+              trades: existing.trades + 1,
+              wins: existing.wins + (trade.pnl > 0 ? 1 : 0),
+              totalPnL: existing.totalPnL + trade.pnl,
+              totalPips: existing.totalPips + (trade.pips || 0),
+              avgSpread: existing.avgSpread + (trade.spread || 0)
+            });
+          });
+
+          const currencyPairData = Array.from(pairMap.entries()).map(([pair, data]) => ({
+            pair,
+            trades: data.trades,
+            winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
+            totalPnL: data.totalPnL,
+            avgPnL: data.totalPnL / data.trades,
+            totalPips: data.totalPips,
+            avgPips: data.totalPips / data.trades,
+            avgSpread: data.avgSpread / data.trades
+          })).sort((a, b) => b.totalPnL - a.totalPnL);
+
+          // Trading Session Performance Analysis
+          const sessionMap = new Map<string, { trades: number; wins: number; totalPnL: number; totalPips: number }>();
+          
+          filteredTrades.forEach(trade => {
+            const session = trade.session || 'unknown';
+            const existing = sessionMap.get(session) || { trades: 0, wins: 0, totalPnL: 0, totalPips: 0 };
+            
+            sessionMap.set(session, {
+              trades: existing.trades + 1,
+              wins: existing.wins + (trade.pnl > 0 ? 1 : 0),
+              totalPnL: existing.totalPnL + trade.pnl,
+              totalPips: existing.totalPips + (trade.pips || 0)
+            });
+          });
+
+          const sessionData = Array.from(sessionMap.entries()).map(([session, data]) => ({
+            session: session.charAt(0).toUpperCase() + session.slice(1),
+            trades: data.trades,
+            winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
+            totalPnL: data.totalPnL,
+            avgPnL: data.totalPnL / data.trades,
+            totalPips: data.totalPips,
+            avgPips: data.totalPips / data.trades
+          }));
+
+          // Pip Analysis
+          const pipValues = filteredTrades.filter(t => t.pips !== undefined).map(t => t.pips!);
+          const pipAnalysis = {
+            avgPipsPerTrade: pipValues.length > 0 ? pipValues.reduce((sum, pips) => sum + pips, 0) / pipValues.length : 0,
+            maxPips: pipValues.length > 0 ? Math.max(...pipValues) : 0,
+            minPips: pipValues.length > 0 ? Math.min(...pipValues) : 0,
+            totalPips: pipValues.reduce((sum, pips) => sum + pips, 0),
+            pipEfficiency: pipValues.length > 0 ? (pipValues.filter(p => p > 0).length / pipValues.length) * 100 : 0
+          };
+
+          // Cost Analysis
+          const spreadCosts = filteredTrades.reduce((sum, trade) => sum + ((trade.spread || 0) * (trade.pipValue || 0)), 0);
+          const swapCosts = filteredTrades.reduce((sum, trade) => sum + (trade.swap || 0), 0);
+
+          return {
+            currencyPairData,
+            sessionData,
+            pipAnalysis,
+            spreadCosts,
+            swapCosts
+          };
+        }, [filteredTrades]);
+
         // Prepare data for detailed analytics charts
         const equityCurveData = useMemo(() => {
           if (filteredTrades.length === 0) return [];
@@ -188,8 +275,9 @@ const Reports: React.FC = () => {
               trade: index + 1,
               balance: runningBalance,
               date: new Date(trade.date).toLocaleDateString(),
-              symbol: trade.symbol,
-              pnl: trade.pnl
+              currencyPair: trade.currencyPair || 'Unknown',
+              pnl: trade.pnl,
+              pips: trade.pips || 0
             };
           });
         }, [filteredTrades]);
@@ -433,6 +521,179 @@ const Reports: React.FC = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Forex-Specific Analytics */}
+          {filteredTrades.length > 0 && (
+            <>
+              {/* Currency Pair Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Currency Pair Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3">
+                      {forexAnalytics.currencyPairData.slice(0, 5).map((pair, index) => (
+                        <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              index === 0 ? 'bg-green-500' : 
+                              index === 1 ? 'bg-blue-500' : 
+                              index === 2 ? 'bg-yellow-500' : 'bg-gray-400'
+                            }`} />
+                            <div>
+                              <p className="font-medium text-gray-900">{pair.pair}</p>
+                              <p className="text-xs text-gray-500">{pair.trades} trades</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-medium text-sm ${pair.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {pair.totalPnL >= 0 ? '+' : ''}${pair.totalPnL.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {pair.winRate.toFixed(1)}% • {pair.avgPips > 0 ? '+' : ''}{pair.avgPips.toFixed(1)} pips
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trading Session Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    Trading Session Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {forexAnalytics.sessionData.map((session) => (
+                      <div key={session.session} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-gray-900">{session.session} Session</h4>
+                          <span className={`text-sm font-medium ${session.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {session.totalPnL >= 0 ? '+' : ''}${session.totalPnL.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                          <div>
+                            <p className="font-medium text-gray-900">{session.trades}</p>
+                            <p>Trades</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{session.winRate.toFixed(1)}%</p>
+                            <p>Win Rate</p>
+                          </div>
+                          <div>
+                            <p className={`font-medium ${session.avgPips >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {session.avgPips >= 0 ? '+' : ''}{session.avgPips.toFixed(1)}
+                            </p>
+                            <p>Avg Pips</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pip Analysis & Trading Costs */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="w-5 h-5" />
+                      Pip Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {forexAnalytics.pipAnalysis.avgPipsPerTrade >= 0 ? '+' : ''}{forexAnalytics.pipAnalysis.avgPipsPerTrade?.toFixed(1) || '0.0'}
+                        </p>
+                        <p className="text-xs text-gray-600">Avg Pips/Trade</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {forexAnalytics.pipAnalysis.totalPips >= 0 ? '+' : ''}{forexAnalytics.pipAnalysis.totalPips?.toFixed(0) || '0'}
+                        </p>
+                        <p className="text-xs text-gray-600">Total Pips</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-green-600">
+                          {forexAnalytics.pipAnalysis.maxPips?.toFixed(1) || '0.0'}
+                        </p>
+                        <p className="text-xs text-gray-600">Best Trade (Pips)</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-red-600">
+                          {forexAnalytics.pipAnalysis.minPips?.toFixed(1) || '0.0'}
+                        </p>
+                        <p className="text-xs text-gray-600">Worst Trade (Pips)</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      Trading Costs
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">Spread Costs</p>
+                          <p className="text-xs text-gray-600">Cost from bid-ask spreads</p>
+                        </div>
+                        <p className="font-medium text-red-600">
+                          -${forexAnalytics.spreadCosts.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">Swap Costs</p>
+                          <p className="text-xs text-gray-600">Overnight financing fees</p>
+                        </div>
+                        <p className={`font-medium ${forexAnalytics.swapCosts >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {forexAnalytics.swapCosts >= 0 ? '+' : ''}${forexAnalytics.swapCosts.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">Commission</p>
+                          <p className="text-xs text-gray-600">Total commission paid</p>
+                        </div>
+                        <p className="font-medium text-red-600">
+                          -${metrics.totalCommissions.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="border-t pt-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-gray-900">Total Trading Costs</p>
+                          <p className="font-bold text-red-600">
+                            -${(forexAnalytics.spreadCosts + Math.abs(forexAnalytics.swapCosts) + metrics.totalCommissions).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Equity Curve */}
             <Card>

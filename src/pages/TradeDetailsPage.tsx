@@ -70,7 +70,7 @@ const TradeDetailsPage: React.FC<TradeDetailsPageProps> = ({ isEmbedded = false 
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Trade Not Found</h2>
           <p className="text-gray-600 mb-4">The requested trade could not be found.</p>
-          <Button onClick={() => navigate('/')}>
+          <Button onClick={() => navigate('/', { state: { page: 'trades' } })}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Trades
           </Button>
@@ -115,7 +115,7 @@ const TradeDetailsPage: React.FC<TradeDetailsPageProps> = ({ isEmbedded = false 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/', { state: { page: 'trades' } })}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />

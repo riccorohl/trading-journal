@@ -222,7 +222,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ selectedDate }) => {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Daily Journal</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Journal</h1>
         <div className="flex items-center space-x-4">
           <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             <Calendar className="w-4 h-4" />

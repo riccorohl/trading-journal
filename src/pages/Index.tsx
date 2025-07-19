@@ -7,9 +7,8 @@ import TradeLog from '../components/TradeLog';
 import DailyJournal from '../components/DailyJournal';
 import Playbooks from '../components/Playbooks';
 import Reports from '../components/Reports';
-import News from '../components/NewsNew';
+import Tools from '../components/Tools';
 import ImportTrades from '../components/ImportTrades';
-import EAIntegration from '../components/EAIntegration';
 import TradeDetailsPage from './TradeDetailsPage';
 import SettingsPage from './SettingsPage';
 
@@ -32,12 +31,18 @@ const Index: React.FC = () => {
       setShowAddTrade(false);
       setShowImportTrades(false);
     } else if (location.pathname === '/') {
-      // Reset to dashboard when on home page
-      setCurrentPage('dashboard');
+      // Check if we have navigation state for specific page
+      const navigationState = location.state as { page?: string } | null;
+      if (navigationState?.page) {
+        setCurrentPage(navigationState.page);
+      } else {
+        // Reset to dashboard when on home page
+        setCurrentPage('dashboard');
+      }
       setShowAddTrade(false);
       setShowImportTrades(false);
     }
-  }, [tradeId, location.pathname]);
+  }, [tradeId, location.pathname, location.state]);
 
   const handlePageChange = (page: string) => {
     // Handle URL navigation for special pages
@@ -68,23 +73,15 @@ const Index: React.FC = () => {
 
   const handleCloseAddTrade = () => {
     setShowAddTrade(false);
-    setCurrentPage('dashboard');
+    setCurrentPage('trades');
   };
 
   const handleCloseImportTrades = () => {
     setShowImportTrades(false);
-    setCurrentPage('dashboard');
+    setCurrentPage('trades');
   };
 
   const renderCurrentPage = () => {
-    if (showAddTrade) {
-      return <AddTrade onClose={handleCloseAddTrade} />;
-    }
-    
-    if (showImportTrades) {
-      return <ImportTrades onClose={handleCloseImportTrades} />;
-    }
-
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
@@ -94,12 +91,10 @@ const Index: React.FC = () => {
         return <DailyJournal />;
       case 'reports':
         return <Reports />;
-      case 'news':
-        return <News />;
-      case 'ea-integration':
-        return <EAIntegration />;
       case 'playbooks':
         return <Playbooks />;
+      case 'tools':
+        return <Tools />;
       case 'trade-details':
         return tradeId ? <TradeDetailsPage isEmbedded={true} /> : <TradeLog />;
       case 'settings':
@@ -123,6 +118,15 @@ const Index: React.FC = () => {
           {renderCurrentPage()}
         </main>
       </div>
+      
+      {/* Modal Overlays */}
+      {showAddTrade && (
+        <AddTrade onClose={handleCloseAddTrade} />
+      )}
+      
+      {showImportTrades && (
+        <ImportTrades onClose={handleCloseImportTrades} />
+      )}
     </div>
   );
 };

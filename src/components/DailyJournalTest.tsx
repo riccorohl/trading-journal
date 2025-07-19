@@ -7,7 +7,7 @@ const DailyJournalTest: React.FC = () => {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Daily Journal</h1>
+        <h1 className="text-2xl font-bold mb-4">Journal</h1>
         <p>Loading...</p>
       </div>
     );
@@ -18,7 +18,7 @@ const DailyJournalTest: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Daily Journal</h1>
+      <h1 className="text-2xl font-bold mb-4">Journal</h1>
       
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Today's Summary</h2>
