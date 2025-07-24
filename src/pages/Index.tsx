@@ -7,6 +7,7 @@ import TradeLog from '../components/TradeLog';
 import DailyJournal from '../components/DailyJournal';
 import Playbooks from '../components/Playbooks';
 import Reports from '../components/Reports';
+import News from '../components/News';
 import Tools from '../components/Tools';
 import ImportTrades from '../components/ImportTrades';
 import TradeDetailsPage from './TradeDetailsPage';
@@ -91,6 +92,8 @@ const Index: React.FC = () => {
         return <DailyJournal />;
       case 'reports':
         return <Reports />;
+      case 'news':
+        return <News />;
       case 'playbooks':
         return <Playbooks />;
       case 'tools':
