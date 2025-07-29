@@ -6,6 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import CalendarWidget from './CalendarWidget';
 import MetricCard from './MetricCard';
 import DayTradesModal from './DayTradesModal';
+import AccountSelector from './AccountSelector';
 import { formatDateForTable } from '../lib/dateUtils';
 import { Trade } from '../types/trade';
 import { addSampleTrades, removeSampleTrades, hasSampleTrades } from '../lib/sampleData';
@@ -233,6 +234,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
           </div>
         </div>
 
+        {/* Account Selector */}
+        <AccountSelector />
+
         {/* Key Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <MetricCard
@@ -428,8 +432,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
                     labelFormatter={(label) => `Date: ${label}`}
                   />
                   <Bar 
-                    dataKey="dailyPnL" 
-                    fill={(entry) => entry >= 0 ? '#10b981' : '#ef4444'}
+                    dataKey="dailyPnL"
                   >
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.dailyPnL >= 0 ? '#10b981' : '#ef4444'} />
@@ -459,7 +462,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="text-sm">
-                        <div className="font-medium text-gray-900">{trade.symbol}</div>
+                        <div className="font-medium text-gray-900">{trade.currencyPair}</div>
                         <div className="text-gray-500">{formatDateForTable(trade.date)}</div>
                       </div>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${

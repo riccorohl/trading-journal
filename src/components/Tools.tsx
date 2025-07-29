@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, DollarSign, Target, TrendingUp, Info, Shield, AlertTriangle, BarChart3, Activity } from 'lucide-react';
+import { Calculator, DollarSign, Target, TrendingUp, Info, Shield, AlertTriangle, BarChart3, Activity, Zap, TrendingDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,6 +8,8 @@ import { ChartContainer, ChartTooltip } from './ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
 import { CURRENCY_PAIRS, LOT_SIZES, calculatePipValue } from '../types/trade';
 import { useTradeContext } from '../contexts/TradeContext';
+import CurrencyStrengthMeter from './CurrencyStrengthMeter';
+import CarryTradeTracker from './CarryTradeTracker';
 
 const Tools: React.FC = () => {
   const { trades } = useTradeContext();
@@ -238,6 +240,8 @@ const Tools: React.FC = () => {
     { id: 'risk-calculator', label: 'Risk Calculator', icon: TrendingUp },
     { id: 'leverage-calculator', label: 'Leverage Calculator', icon: Shield },
     { id: 'margin-calculator', label: 'Margin Calculator', icon: AlertTriangle },
+    { id: 'currency-strength', label: 'Currency Strength Meter', icon: Zap },
+    { id: 'carry-trade-tracker', label: 'Carry Trade Tracker', icon: TrendingDown },
     { id: 'risk-dashboard', label: 'Risk Dashboard', icon: BarChart3 },
     { id: 'drawdown-analysis', label: 'Drawdown Analysis', icon: Activity },
     { id: 'info', label: 'Calculator Info', icon: Info },
@@ -639,6 +643,12 @@ const Tools: React.FC = () => {
             </CardContent>
           </Card>
         );
+
+      case 'currency-strength':
+        return <CurrencyStrengthMeter />;
+
+      case 'carry-trade-tracker':
+        return <CarryTradeTracker />;
 
       case 'margin-calculator':
         return (

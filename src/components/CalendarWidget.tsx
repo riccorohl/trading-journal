@@ -144,60 +144,53 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ trades, onDateClick }) 
   const monthlyStats = getMonthlyStats();
 
   return (
-    <div className="bg-white p-6 font-sans">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
-          <div className="flex flex-wrap items-center space-x-3 sm:space-x-6 mb-4 md:mb-0">
-            <button
-              onClick={() => navigateMonth('prev')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {monthNames[currentMonth]} {currentYear}
-            </h1>
-            <button
-              onClick={() => navigateMonth('next')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            </button>
-            <div className="bg-gray-100 px-3 py-1.5 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">This month</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 sm:space-x-6">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Monthly PnL:</span>
-              <span className={`text-sm font-semibold ${monthlyStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${monthlyStats.totalPnL >= 0 ? '+' : ''}{monthlyStats.totalPnL.toFixed(0)}
-              </span>
-            </div>
-            <Settings className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
-            <Info className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
-          </div>
+    <>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center space-x-2 sm:space-x-4 mb-4 md:mb-0">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {monthNames[currentMonth]} {currentYear}
+          </h1>
+          <button
+            onClick={() => navigateMonth('next')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
-
-        {/* Calendar Section */}
-        <div>
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-t-lg overflow-hidden">
-            {daysOfWeek.map(day => (
-              <div key={day} className="p-4 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r border-b border-gray-100 last:border-r-0">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 border-l border-gray-100 rounded-b-lg overflow-hidden">
-            {renderCalendarDays()}
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600">Monthly PnL:</span>
+            <span className={`text-sm font-semibold ${monthlyStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${monthlyStats.totalPnL >= 0 ? '+' : ''}{monthlyStats.totalPnL.toFixed(0)}
+            </span>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Calendar Section */}
+      <div className="flex-1 flex flex-col">
+        {/* Days of Week Header */}
+        <div className="grid grid-cols-7">
+          {daysOfWeek.map(day => (
+            <div key={day} className="py-2 text-center text-xs font-medium text-gray-500">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 flex-1">
+          {renderCalendarDays()}
+        </div>
+      </div>
+    </>
   );
 };
 

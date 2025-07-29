@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import Dashboard from '../components/Dashboard';
+import DashboardV2 from '../components/Dashboard_v2';
 import AddTrade from '../components/AddTrade';
 import TradeLog from '../components/TradeLog';
 import DailyJournal from '../components/DailyJournal';
@@ -85,7 +85,7 @@ const Index: React.FC = () => {
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <DashboardV2 />;
       case 'trades':
         return <TradeLog />;
       case 'journal':
@@ -103,7 +103,7 @@ const Index: React.FC = () => {
       case 'settings':
         return <SettingsPage />;
       default:
-        return <Dashboard />;
+        return <DashboardV2 />;
     }
   };
 

@@ -2,6 +2,9 @@
 export interface Trade {
   id: string;
   
+  // Account Information (NEW)
+  accountId: string; // References the trading account this trade belongs to
+  
   // Currency Pair Information
   currencyPair: string; // e.g., "EUR/USD", "GBP/JPY"
   
@@ -39,7 +42,7 @@ export interface Trade {
   commission: number; // Commission/fees
   swap?: number; // Overnight financing costs
   
-  // Account Information
+  // Account Information (DEPRECATED - replaced by Account interface)
   accountCurrency: string; // USD, EUR, GBP, etc.
   
   // Strategy & Analysis
@@ -53,6 +56,53 @@ export interface Trade {
   
   // Trade Status
   status: 'open' | 'closed';
+}
+
+// Trading Account Interface (NEW)
+export interface TradingAccount {
+  id: string;
+  name: string; // User-friendly name like "Live Account", "Demo MT4", etc.
+  type: 'live' | 'demo'; // Account type
+  broker: string; // Broker name
+  currency: string; // Account base currency (USD, EUR, etc.)
+  balance: number; // Current account balance
+  initialBalance: number; // Starting balance for calculations
+  platform: 'mt4' | 'mt5' | 'manual' | 'other'; // Trading platform
+  description?: string; // Optional description
+  isActive: boolean; // Whether this account is currently active
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+}
+
+// Account Form Data Interface (NEW)
+export interface AccountFormData {
+  name: string;
+  type: 'live' | 'demo';
+  broker: string;
+  currency: string;
+  balance: string;
+  initialBalance: string;
+  platform: 'mt4' | 'mt5' | 'manual' | 'other';
+  description: string;
+}
+
+// Account Statistics Interface (NEW)
+export interface AccountStats {
+  accountId: string;
+  totalTrades: number;
+  totalPnL: number;
+  winRate: number;
+  profitFactor: number;
+  maxDrawdown: number;
+  currentBalance: number;
+  roi: number; // Return on Investment
+  sharpeRatio?: number;
+  averageWin: number;
+  averageLoss: number;
+  largestWin: number;
+  largestLoss: number;
+  winStreak: number;
+  lossStreak: number;
 }
 
 
@@ -133,7 +183,7 @@ export const TRADING_SESSIONS = {
 export const getPipDecimalPlaces = (currencyPair: string): number => {
   const jpyPairs = ['JPY', 'HUF', 'KRW', 'CLP', 'ISK', 'PYG'];
   const baseCurrency = currencyPair.split('/')[1];
-  return jpyPairs.includes(baseCurrency) ? 2 : 4;
+  return jpyPairs.includes(baseCurrency || '') ? 2 : 4;
 };
 
 // Utility function to calculate pip value
