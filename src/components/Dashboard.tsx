@@ -2,29 +2,31 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTradeContext } from '../contexts/TradeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useDashboardConfig } from '../hooks/useDashboardConfig';
 import LoadingSpinner from './LoadingSpinner';
 import CalendarWidget from './CalendarWidget';
-import MetricCard from './MetricCard';
+import DashboardWidget from './DashboardWidget';
 import DayTradesModal from './DayTradesModal';
 import AccountSelector from './AccountSelector';
 import { formatDateForTable } from '../lib/dateUtils';
 import { Trade } from '../types/trade';
-import { addSampleTrades, removeSampleTrades, hasSampleTrades } from '../lib/sampleData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { addSampleTrades } from '../lib/sampleData';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area, Cell } from 'recharts';
 
 interface DashboardProps {
   onNavigateToJournal?: (date: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
+const Dashboard: React.FC<DashboardProps> = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { trades, loading } = useTradeContext();
+  const { getSelectedWidgets, updateWidget } = useDashboardConfig();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [chartTimeframe, setChartTimeframe] = useState<'week' | 'month' | 'year'>('month');
   const [sampleDataLoading, setSampleDataLoading] = useState(false);
-  const [showSampleDataOption, setShowSampleDataOption] = useState(false);
+  const [editingWidgets, setEditingWidgets] = useState(false);
 
   const handleTradeClick = (trade: Trade) => {
     navigate(`/trade/${trade.id}`);
@@ -49,12 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
   // Check if we should show sample data option
   useEffect(() => {
     const checkSampleDataStatus = async () => {
-      if (user && trades.length === 0) {
-        const hasSamples = await hasSampleTrades(user.uid);
-        setShowSampleDataOption(!hasSamples);
-      } else {
-        setShowSampleDataOption(false);
-      }
+      // Sample data logic can be added back if needed
     };
 
     checkSampleDataStatus();
@@ -67,7 +64,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
     setSampleDataLoading(true);
     try {
       await addSampleTrades(user.uid);
-      setShowSampleDataOption(false);
       // Show success message or toast here if desired
     } catch (error) {
       console.error('Error loading sample data:', error);
@@ -237,47 +233,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
         {/* Account Selector */}
         <AccountSelector />
 
-        {/* Key Metrics Row */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <MetricCard
-            title="Net P&L"
-            value={`$${metrics.netPnL.toFixed(2)}`}
-            subtitle={`${metrics.totalTrades} trades`}
-            trend={metrics.netPnL >= 0 ? 'up' : 'down'}
-          />
-          
-          <MetricCard
-            title="Trade Expectancy"
-            value={`$${metrics.tradeExpectancy.toFixed(2)}`}
-            subtitle="Per trade"
-          />
-          
-          <MetricCard
-            title="Profit Factor"
-            value={metrics.profitFactor.toFixed(2)}
-            subtitle=""
-            showChart={true}
-            chartData={[
-              { name: 'Factor', value: Math.min(metrics.profitFactor, 5) }
-            ]}
-          />
-          
-          <MetricCard
-            title="Win %"
-            value={`${metrics.winRate.toFixed(2)}%`}
-            subtitle={`${Math.round(metrics.winRate / 100 * metrics.totalTrades)} wins`}
-            showChart={true}
-            chartData={[
-              { name: 'Wins', value: metrics.winRate },
-              { name: 'Losses', value: 100 - metrics.winRate }
-            ]}
-          />
-          
-          <MetricCard
-            title="Avg win/loss trade"
-            value={metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(1) : '0'}
-            subtitle={`$${metrics.avgWin.toFixed(2)} / $${metrics.avgLoss.toFixed(2)}`}
-          />
+        {/* Customizable Widgets Row */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Key Metrics</h2>
+          <button
+            onClick={() => setEditingWidgets(!editingWidgets)}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            {editingWidgets ? 'Done' : 'Customize Widgets'}
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {getSelectedWidgets().map((widget, index) => (
+            <DashboardWidget
+              key={widget.id}
+              widget={widget}
+              trades={trades}
+              position={index}
+              isEditing={editingWidgets}
+              onWidgetChange={(newWidgetId) => updateWidget(index, newWidgetId)}
+            />
+          ))}
         </div>
 
         {/* Charts Row */}
@@ -521,6 +498,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToJournal }) => {
             <CalendarWidget 
               trades={trades} 
               onDateClick={handleDateClick}
+              size={{ w: 300, h: 200 }}
             />
           </div>
         </div>

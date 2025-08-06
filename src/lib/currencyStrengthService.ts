@@ -37,7 +37,7 @@ interface ApiConfig {
 }
 
 class CurrencyStrengthService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
   private cacheTimeout = 15 * 60 * 1000; // 15 minutes
   private lastRequestTime = 0;
   private requestCount = 0;
@@ -84,7 +84,7 @@ class CurrencyStrengthService {
   /**
    * Get cached data if valid
    */
-  private getCached(key: string): any | null {
+  private getCached(key: string): unknown {
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
@@ -95,7 +95,7 @@ class CurrencyStrengthService {
   /**
    * Store data in cache
    */
-  private setCached(key: string, data: any): void {
+  private setCached(key: string, data: unknown): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now()
@@ -106,7 +106,7 @@ class CurrencyStrengthService {
    * Calculate currency strength based on multiple currency pairs
    * This is a simplified algorithm - in production would use more sophisticated methods
    */
-  private calculateCurrencyStrength(currencyData: any): CurrencyStrengthData[] {
+  private calculateCurrencyStrength(currencyData: Record<string, unknown>): CurrencyStrengthData[] {
     const strengths: CurrencyStrengthData[] = [];
     
     // For demo purposes, calculate relative strength
@@ -230,7 +230,7 @@ class CurrencyStrengthService {
       const cached = this.getCached(cacheKey);
       if (cached) {
         console.log('Currency strength data loaded from cache');
-        return cached;
+        return cached as CurrencyStrengthResponse;
       }
 
       // Check rate limiting

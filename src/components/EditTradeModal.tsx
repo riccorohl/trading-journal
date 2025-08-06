@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
+import { Trade } from '../types/trade';
 import {
   Dialog,
   DialogContent,
@@ -12,27 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Trade {
-  id: string;
-  symbol: string;
-  date: string;
-  timeIn: string;
-  timeOut?: string;
-  side: 'long' | 'short';
-  entryPrice: number;
-  exitPrice?: number;
-  quantity: number;
-  stopLoss?: number;
-  takeProfit?: number;
-  pnl?: number;
-  commission?: number;
-  strategy?: string;
-  notes?: string;
-  confidence?: number;
-  emotions?: string;
-  marketConditions?: string;
-}
 
 interface EditTradeModalProps {
   trade: Trade | null;

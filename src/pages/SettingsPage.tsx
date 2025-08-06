@@ -35,8 +35,7 @@ const SettingsPage: React.FC = () => {
   const [notificationSettings, setNotificationSettings] = useState({
     tradeAlerts: true,
     dailyReports: false,
-    weeklyReports: true,
-    newsUpdates: false
+    weeklyReports: true
   });
   
   const [privacySettings, setPrivacySettings] = useState({
@@ -314,19 +313,6 @@ const SettingsPage: React.FC = () => {
                     checked={notificationSettings.weeklyReports}
                     onCheckedChange={(checked) => 
                       setNotificationSettings(prev => ({ ...prev, weeklyReports: checked }))
-                    }
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>News Updates</Label>
-                    <p className="text-sm text-gray-500">Stay updated with market news</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.newsUpdates}
-                    onCheckedChange={(checked) => 
-                      setNotificationSettings(prev => ({ ...prev, newsUpdates: checked }))
                     }
                   />
                 </div>

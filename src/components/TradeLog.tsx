@@ -2,15 +2,22 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MetricCard from './MetricCard';
 import EditTradeModal from './EditTradeModal';
-import { Upload, Edit, Trash2, BarChart3, Filter, X, ChevronDown, Search } from 'lucide-react';
+import { ColumnSelector } from './ColumnSelector';
+import { DraggableTableHeader } from './DraggableTableHeader';
+import { TableCell } from './TableCell';
+import { Upload, Filter, X, ChevronDown, Search } from 'lucide-react';
 import { useTradeContext } from '../contexts/TradeContext';
+import { useColumnConfig } from '../hooks/useColumnConfig';
+import { getColumnById } from '../config/tableConfig';
 import { Trade } from '../types/trade';
-import { formatDateForTable } from '../lib/dateUtils';
 
 const TradeLog: React.FC = () => {
   const navigate = useNavigate();
   const { trades, deleteTrade, getTotalPnL, getWinRate, getProfitFactor } = useTradeContext();
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
+  
+  // Column configuration
+  const { visibleColumns, toggleColumn, reorderColumns, orderedVisibleColumns } = useColumnConfig();
   
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -237,6 +244,13 @@ const TradeLog: React.FC = () => {
           <div className="text-sm text-gray-500">
             {filteredTrades.length} {filteredTrades.length === 1 ? 'trade' : 'trades'}
           </div>
+          
+          {/* Column Selector */}
+          <ColumnSelector
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+          
           {/* Filter Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
@@ -435,38 +449,14 @@ const TradeLog: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Currency Pair
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Side
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entry
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Exit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Lot Size
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pips
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    P&L
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
+                <DraggableTableHeader
+                  columns={orderedVisibleColumns.map(id => getColumnById(id)!).filter(Boolean)}
+                  onReorder={reorderColumns}
+                >
+                  {(column) => (
+                    <span>{column.label}</span>
+                  )}
+                </DraggableTableHeader>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredTrades.map((trade) => (
@@ -475,92 +465,21 @@ const TradeLog: React.FC = () => {
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => handleTradeClick(trade)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {trade.currencyPair || '--'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDateForTable(trade.date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        trade.side === 'long' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {trade.side.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.entryPrice ? trade.entryPrice.toFixed(5) : '--'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.exitPrice ? trade.exitPrice.toFixed(5) : '--'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{trade.lotSize || '--'}</span>
-                        <span className="text-xs text-gray-500 capitalize">{trade.lotType || ''}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.pips !== undefined ? (
-                        <span className={`font-medium ${trade.pips >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
-                        </span>
-                      ) : (
-                        '--'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {trade.pnl !== undefined ? (
-                        <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
-                        </span>
-                      ) : (
-                        '--'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        trade.status === 'closed' 
-                          ? 'bg-gray-100 text-gray-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {trade.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReviewTrade(trade);
-                          }}
-                          className="text-purple-600 hover:text-purple-900 transition-colors"
-                          title="Review Trade"
-                        >
-                          <BarChart3 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditTrade(trade.id);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTrade(trade.id);
-                          }}
-                          className="text-red-600 hover:text-red-900 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {orderedVisibleColumns.map(columnId => {
+                      const column = getColumnById(columnId);
+                      if (!column) return null;
+                      
+                      return (
+                        <TableCell
+                          key={columnId}
+                          column={column}
+                          trade={trade}
+                          onEdit={() => handleEditTrade(trade.id)}
+                          onDelete={() => handleDeleteTrade(trade.id)}
+                          onView={() => handleReviewTrade(trade)}
+                        />
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -570,7 +489,7 @@ const TradeLog: React.FC = () => {
       )}
 
       <EditTradeModal 
-        trade={trades.find(t => t.id === editingTradeId) || null}
+        trade={trades.find(t => t.id === editingTradeId) as any || null}
         isOpen={editingTradeId !== null}
         onClose={() => setEditingTradeId(null)}
       />

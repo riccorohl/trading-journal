@@ -16,17 +16,6 @@ export interface EconomicEvent {
   description?: string;
 }
 
-export interface NewsItem {
-  id: string;
-  title: string;
-  summary: string;
-  url: string;
-  publishedAt: string;
-  source: string;
-  impact: 'high' | 'medium' | 'low';
-  category: 'central-bank' | 'employment' | 'inflation' | 'gdp' | 'trade' | 'general';
-  sentiment?: 'positive' | 'negative' | 'neutral';
-}
 
 export interface MarketCorrelation {
   eventId: string;
@@ -50,7 +39,7 @@ interface ApiConfig {
 
 // Service class for economic calendar data
 class EconomicCalendarService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: EconomicEvent[] | unknown; timestamp: number }> = new Map();
   private cacheTimeout = 15 * 60 * 1000; // 15 minutes
   private requestCount = 0;
   private requestWindow = Date.now();
@@ -148,41 +137,6 @@ class EconomicCalendarService {
     }
   ];
 
-  private sampleNews: NewsItem[] = [
-    {
-      id: 'fed_pause_signals_2025',
-      title: 'Federal Reserve Signals Potential Pause in Rate Hiking Cycle',
-      summary: 'Fed officials indicate they may pause aggressive rate increases as banking sector stress emerges and inflation shows signs of cooling.',
-      url: 'https://example.com/fed-signals-pause',
-      publishedAt: '2025-07-23T14:30:00Z',
-      source: 'Reuters',
-      impact: 'high',
-      category: 'central-bank',
-      sentiment: 'neutral'
-    },
-    {
-      id: 'eur_usd_volatility_2025',
-      title: 'EUR/USD Poised for Major Volatility as ECB Decision Looms',
-      summary: 'Currency markets brace for significant movements as European Central Bank prepares to announce policy decisions amid diverging economic data.',
-      url: 'https://example.com/eur-usd-volatility',
-      publishedAt: '2025-07-23T12:15:00Z',
-      source: 'Bloomberg',
-      impact: 'high',
-      category: 'central-bank',
-      sentiment: 'neutral'
-    },
-    {
-      id: 'us_jobs_mixed_2025',
-      title: 'U.S. Employment Data Presents Mixed Economic Picture',
-      summary: 'Latest job market indicators show conflicting trends, with job creation slowing but wage growth remaining resilient.',
-      url: 'https://example.com/us-jobs-mixed',
-      publishedAt: '2025-07-23T10:45:00Z',
-      source: 'MarketWatch',
-      impact: 'medium',
-      category: 'employment',
-      sentiment: 'neutral'
-    }
-  ];
 
   // Rate limiting check
   private canMakeRequest(): boolean {
@@ -198,7 +152,7 @@ class EconomicCalendarService {
   }
 
   // Cache management
-  private getCached(key: string): any | null {
+  private getCached(key: string): EconomicEvent[] | unknown | null {
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
@@ -206,7 +160,7 @@ class EconomicCalendarService {
     return null;
   }
 
-  private setCache(key: string, data: any): void {
+  private setCache(key: string, data: EconomicEvent[] | unknown): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
@@ -217,7 +171,7 @@ class EconomicCalendarService {
     // Check cache first
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached;
+      return cached as EconomicEvent[];
     }
 
     try {
@@ -262,27 +216,6 @@ class EconomicCalendarService {
     return allEvents.filter(event => event.impact === 'high');
   }
 
-  // Get market news
-  async getMarketNews(limit: number = 10): Promise<NewsItem[]> {
-    const cacheKey = `news_${limit}`;
-    
-    // Check cache first
-    const cached = this.getCached(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    try {
-      // For now, return sample data
-      // In production, this would fetch from news APIs
-      const news = this.sampleNews.slice(0, limit);
-      this.setCache(cacheKey, news);
-      return news;
-    } catch (error) {
-      console.warn('Failed to fetch market news from APIs, using sample data:', error);
-      return this.sampleNews.slice(0, limit);
-    }
-  }
 
   // Get events by currency
   async getEventsByCurrency(currency: string, days: number = 7): Promise<EconomicEvent[]> {

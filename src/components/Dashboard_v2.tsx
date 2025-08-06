@@ -1,26 +1,31 @@
-import React, { useState, useMemo } from 'react';
-import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTradeContext } from '../contexts/TradeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Trade } from '../types/trade';
 import DayTradesModal from './DayTradesModal';
 import AccountSelector from './AccountSelector';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from './ui/dropdown-menu';
-import { Plus, Settings, X } from 'lucide-react';
-import { WIDGET_REGISTRY, DEFAULT_ACTIVE_WIDGETS, getWidgetById, getAvailableWidgets } from '../lib/widgetRegistry';
-
-// Force reload - Updated with invisible subtitle technique
-
-const ResponsiveReactGridLayout = WidthProvider(Responsive);
+import { DEFAULT_MAIN_WIDGETS, getAvailableWidgets } from '../lib/widgetRegistry';
+import { dashboardService } from '../lib/dashboardService';
+import WidgetWrapper from './ui/WidgetWrapper';
+import EmptyWidgetSlot from './ui/EmptyWidgetSlot';
+import { useDashboardConfig } from '../hooks/useDashboardConfig';
+import DashboardWidget from './DashboardWidget';
 
 const DashboardV2 = () => {
   const { trades } = useTradeContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-  const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_ACTIVE_WIDGETS);
-  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // State for the customizable grid - now limited to 4 slots
+  const [mainWidgets, setMainWidgets] = useState<(string | null)[]>([...DEFAULT_MAIN_WIDGETS.slice(0, 4)]);
+  
+  // State for customizable top metrics widgets
+  const { getSelectedWidgets, updateWidget } = useDashboardConfig();
+  
+  const [isLoadingLayout, setIsLoadingLayout] = useState(true);
 
   // Event handlers
   const handleDateClick = (date: string) => {
@@ -28,119 +33,97 @@ const DashboardV2 = () => {
     setIsDayModalOpen(true);
   };
 
-  const handleCloseDayModal = () => {
-    setIsDayModalOpen(false);
-    setSelectedDate('');
-  };
+  const handleCloseDayModal = () => setIsDayModalOpen(false);
+  const handleTradeClick = (trade: Trade) => navigate(`/trade/${trade.id}`);
 
-  const handleDayTradeClick = (trade: Trade) => {
-    setIsDayModalOpen(false);
-    navigate(`/trade/${trade.id}`);
-  };
+  // Load user's saved layout
+  useEffect(() => {
+    const loadUserLayout = async () => {
+      if (!user?.uid) {
+        setIsLoadingLayout(false);
+        return;
+      }
+      try {
+        const savedLayout = await dashboardService.getUserLayout(user.uid);
+        if (savedLayout && savedLayout.mainWidgets.length > 0) {
+          // Ensure we have exactly 4 slots, padding with null if necessary
+          const paddedWidgets: (string | null)[] = [...savedLayout.mainWidgets.slice(0, 4)];
+          while (paddedWidgets.length < 4) {
+            paddedWidgets.push(null);
+          }
+          setMainWidgets(paddedWidgets);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard layout:', error);
+      } finally {
+        setIsLoadingLayout(false);
+      }
+    };
+    loadUserLayout();
+  }, [user?.uid]);
 
-  const handleTradeClick = (trade: Trade) => {
-    navigate(`/trade/${trade.id}`);
-  };
+  // Debounced save function
+  const debouncedSave = useCallback((() => {
+    let timeoutId: NodeJS.Timeout;
+    return (widgets: (string | null)[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        if (!user?.uid) return;
+        try {
+          // Filter out null values for saving
+          const validWidgets = widgets.filter((w): w is string => w !== null);
+          await dashboardService.saveUserLayout(user.uid, [], validWidgets);
+        } catch (error) {
+          console.error('Error saving dashboard layout:', error);
+        }
+      }, 1000);
+    };
+  })(), [user?.uid]);
 
-  // Widget management
-  const addWidget = (widgetId: string) => {
-    if (!activeWidgets.includes(widgetId)) {
-      setActiveWidgets([...activeWidgets, widgetId]);
+  // Widget management for the static 2x2 grid
+  const addWidgetToSlot = (widgetId: string, slotIndex?: number) => {
+    const newWidgets = [...mainWidgets];
+    
+    if (slotIndex !== undefined) {
+      // Add to specific slot
+      newWidgets[slotIndex] = widgetId;
+    } else {
+      // Find first empty slot
+      const emptySlotIndex = newWidgets.findIndex(w => w === null);
+      if (emptySlotIndex !== -1) {
+        newWidgets[emptySlotIndex] = widgetId;
+      }
     }
+    
+    setMainWidgets(newWidgets);
+    debouncedSave(newWidgets);
   };
 
   const removeWidget = (widgetId: string) => {
-    setActiveWidgets(activeWidgets.filter(id => id !== widgetId));
+    const newWidgets = mainWidgets.map(w => w === widgetId ? null : w);
+    setMainWidgets(newWidgets);
+    debouncedSave(newWidgets);
   };
 
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-  };
-
-  // Calculate metrics (same as original Dashboard)
+  // Metrics calculation
   const metrics = useMemo(() => {
-    const closedTrades = trades.filter(trade => trade.status === 'closed' && trade.pnl !== undefined);
-    
-    if (closedTrades.length === 0) {
-      return {
-        netPnL: 0,
-        tradeExpectancy: 0,
-        profitFactor: 0,
-        winRate: 0,
-        avgWin: 0,
-        avgLoss: 0,
-        totalTrades: 0,
-        zellaScore: 0
-      };
-    }
-
-    const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const totalCommissions = closedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    const netPnL = totalPnL - totalCommissions;
-    
-    const winningTrades = closedTrades.filter(trade => (trade.pnl || 0) > 0);
-    const losingTrades = closedTrades.filter(trade => (trade.pnl || 0) < 0);
-    
-    const grossWins = winningTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const grossLosses = Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0));
-    
+    const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
+    if (closedTrades.length === 0) return { netPnL: 0, tradeExpectancy: 0, profitFactor: 0, winRate: 0, avgWin: 0, avgLoss: 0, totalTrades: 0, zellaScore: 0 };
+    const totalPnL = closedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
+    const losingTrades = closedTrades.filter(t => (t.pnl || 0) < 0);
+    const grossWins = winningTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const grossLosses = Math.abs(losingTrades.reduce((sum, t) => sum + (t.pnl || 0), 0));
     const winRate = (winningTrades.length / closedTrades.length) * 100;
     const avgWin = winningTrades.length > 0 ? grossWins / winningTrades.length : 0;
     const avgLoss = losingTrades.length > 0 ? grossLosses / losingTrades.length : 0;
     const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? 999 : 0;
-    const tradeExpectancy = closedTrades.length > 0 ? netPnL / closedTrades.length : 0;
-    
-    // Simple Zella Score calculation (0-100)
-    const zellaScore = Math.min(100, Math.max(0, 
-      (winRate * 0.3) + 
-      (Math.min(profitFactor * 10, 50) * 0.4) + 
-      (Math.min(avgWin / Math.max(avgLoss, 1), 10) * 0.3 * 10)
-    ));
-
-    return {
-      netPnL,
-      tradeExpectancy,
-      profitFactor,
-      winRate,
-      avgWin,
-      avgLoss,
-      totalTrades: closedTrades.length,
-      zellaScore
-    };
+    const tradeExpectancy = totalPnL / closedTrades.length;
+    const zellaScore = Math.min(100, Math.max(0, (winRate * 0.3) + (Math.min(profitFactor * 10, 50) * 0.4) + (Math.min(avgWin / Math.max(avgLoss, 1), 10) * 0.3 * 10)));
+    return { netPnL: totalPnL, tradeExpectancy, profitFactor, winRate, avgWin, avgLoss, totalTrades: closedTrades.length, zellaScore };
   }, [trades]);
 
-  // Generate layout for active widgets
-  const generateLayout = (): Layout[] => {
-    let currentY = 0;
-    let currentX = 0;
-    const maxCols = 10;
-
-    return activeWidgets.map(widgetId => {
-      const widget = getWidgetById(widgetId);
-      if (!widget) return { i: widgetId, x: 0, y: 0, w: 2, h: 2 };
-
-      const layout = {
-        i: widgetId,
-        x: currentX,
-        y: currentY,
-        w: widget.defaultLayout.w,
-        h: widget.defaultLayout.h,
-        minW: widget.minSize.w,
-        minH: widget.minSize.h
-      };
-
-      // Update position for next widget
-      currentX += widget.defaultLayout.w;
-      if (currentX >= maxCols) {
-        currentX = 0;
-        currentY += widget.defaultLayout.h;
-      }
-
-      return layout;
-    });
-  };
-
-  const availableWidgets = getAvailableWidgets(activeWidgets);
+  const availableWidgets = getAvailableWidgets(mainWidgets.filter((w): w is string => w !== null));
 
   return (
     <>
@@ -149,151 +132,58 @@ const DashboardV2 = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">
-              Customizable trading dashboard
-            </p>
-          </div>
-          
-          {/* Dashboard Controls */}
-          <div className="flex items-center space-x-3">
-            {/* Add Widget Dropdown */}
-            {availableWidgets.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Widget
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {Object.entries(
-                    availableWidgets.reduce((acc, widget) => {
-                      if (!acc[widget.category]) acc[widget.category] = [];
-                      acc[widget.category].push(widget);
-                      return acc;
-                    }, {} as Record<string, typeof availableWidgets>)
-                  ).map(([category, widgets]) => (
-                    <div key={category}>
-                      <DropdownMenuLabel className="text-xs text-gray-500 uppercase">
-                        {category}
-                      </DropdownMenuLabel>
-                      {widgets.map(widget => (
-                        <DropdownMenuItem 
-                          key={widget.id}
-                          onClick={() => addWidget(widget.id)}
-                          className="flex flex-col items-start"
-                        >
-                          <span className="font-medium">{widget.title}</span>
-                          <span className="text-xs text-gray-500">{widget.description}</span>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </div>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Edit Mode Toggle */}
-            <Button 
-              variant={isEditMode ? "default" : "outline"} 
-              size="sm"
-              onClick={toggleEditMode}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              {isEditMode ? 'Done Editing' : 'Edit Layout'}
-            </Button>
+            <p className="text-gray-600 mt-1">Your trading performance at a glance.</p>
           </div>
         </div>
 
-        {/* Account Selector */}
         <AccountSelector />
 
-        {/* Edit Mode Notice */}
-        {isEditMode && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Settings className="h-5 w-5 text-blue-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Edit Mode:</strong> Drag to rearrange widgets, resize by dragging corners, or click the X to remove widgets.
-                </p>
-              </div>
+        {/* Customizable Top Metrics Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {getSelectedWidgets().map((widget, index) => (
+            <DashboardWidget
+              key={widget.id}
+              widget={widget}
+              trades={trades}
+              position={index}
+              onWidgetChange={(newWidgetId) => updateWidget(index, newWidgetId)}
+            />
+          ))}
+        </div>
+
+        {/* Static 2x2 Main Grid */}
+        {!isLoadingLayout && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-[1000px]">
+              {mainWidgets.map((widgetId, index) => (
+                <div key={index} className="h-full min-h-0">
+                  {widgetId ? (
+                    <WidgetWrapper
+                      widgetId={widgetId}
+                      size={{ w: 6, h: 4 }}
+                      onRemove={removeWidget}
+                      metrics={metrics}
+                      trades={trades}
+                      handleTradeClick={(tradeId: string) => {
+                        const trade = trades.find(t => t.id === tradeId);
+                        if (trade) handleTradeClick(trade);
+                      }}
+                      onDateClick={handleDateClick}
+                    />
+                  ) : (
+                    <EmptyWidgetSlot
+                      onAddWidget={(newWidgetId) => addWidgetToSlot(newWidgetId, index)}
+                      availableWidgets={availableWidgets}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
-
-        {/* Grid Layout */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <ResponsiveReactGridLayout
-            className="layout"
-            layouts={{ lg: generateLayout() }}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 10, md: 8, sm: 6, xs: 4, xxs: 2 }}
-            rowHeight={50}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
-            margin={[16, 16]}
-          >
-            {activeWidgets
-              .map(widgetId => getWidgetById(widgetId))
-              .filter((widget): widget is NonNullable<typeof widget> => widget !== undefined)
-              .map(widget => {
-                const WidgetComponent = widget.component;
-                
-                return (
-                  <div key={widget.id} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm relative flex flex-col">
-                    {/* Remove Widget Button (only in edit mode) */}
-                    {isEditMode && (
-                      <button
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeWidget(widget.id);
-                        }}
-                        className="absolute -top-1 -right-1 z-50 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-110 flex items-center justify-center"
-                        style={{ 
-                          width: '28px', 
-                          height: '28px',
-                          transform: 'translate(50%, -50%)'
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                    
-                    {/* Widget Content */}
-                    <WidgetComponent
-                      metrics={metrics}
-                      trades={trades}
-                      handleTradeClick={handleTradeClick}
-                      onDateClick={handleDateClick}
-                      size={{ w: widget.defaultLayout.w, h: widget.defaultLayout.h }}
-                    />
-                  </div>
-                );
-              })}
-          </ResponsiveReactGridLayout>
-        </div>
       </div>
 
-      {/* Day Trades Modal */}
-      {isDayModalOpen && (
-        <DayTradesModal
-          isOpen={isDayModalOpen}
-          onClose={handleCloseDayModal}
-          date={selectedDate}
-          trades={trades.filter(trade => trade.date === selectedDate)}
-          onTradeClick={handleDayTradeClick}
-        />
-      )}
+      {isDayModalOpen && <DayTradesModal isOpen={isDayModalOpen} onClose={handleCloseDayModal} date={selectedDate} trades={trades.filter(t => t.date === selectedDate)} onTradeClick={handleTradeClick} />}
     </>
   );
 };

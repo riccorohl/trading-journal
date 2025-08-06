@@ -271,7 +271,7 @@ const CurrencyStrengthMeter: React.FC = () => {
                       tick={{ fontSize: 12 }}
                     />
                     <Tooltip 
-                      formatter={(value: any) => [`${value.toFixed(1)}`, 'Strength']}
+                      formatter={(value: number) => [`${value.toFixed(1)}`, 'Strength']}
                       labelFormatter={(label) => `Date: ${label}`}
                     />
                     <Line 

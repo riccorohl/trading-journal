@@ -69,7 +69,7 @@ interface ApiConfig {
 }
 
 class CarryTradeService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
   private cacheTimeout = 15 * 60 * 1000; // 15 minutes
   private lastRequestTime = 0;
   private requestInterval = 12000; // 12 seconds between requests (5 per minute)
@@ -99,15 +99,15 @@ class CarryTradeService {
     return now - this.lastRequestTime >= this.requestInterval;
   }
 
-  private getCached(key: string): any | null {
+  private getCached<T>(key: string): T | null {
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.data;
+      return cached.data as T;
     }
     return null;
   }
 
-  private setCached(key: string, data: any): void {
+  private setCached<T>(key: string, data: T): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
@@ -116,7 +116,7 @@ class CarryTradeService {
    */
   async getInterestRates(): Promise<InterestRate[]> {
     const cacheKey = 'interest_rates';
-    const cached = this.getCached(cacheKey);
+    const cached = this.getCached<InterestRate[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -142,7 +142,7 @@ class CarryTradeService {
    */
   async getCarryTradeOpportunities(): Promise<CarryTradeOpportunity[]> {
     const cacheKey = 'carry_opportunities';
-    const cached = this.getCached(cacheKey);
+    const cached = this.getCached<CarryTradeOpportunity[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -162,7 +162,7 @@ class CarryTradeService {
    */
   async getCarryTradeAnalysis(): Promise<CarryTradeAnalysis> {
     const cacheKey = 'carry_analysis';
-    const cached = this.getCached(cacheKey);
+    const cached = this.getCached<CarryTradeAnalysis>(cacheKey);
     if (cached) return cached;
 
     try {

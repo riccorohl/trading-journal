@@ -213,7 +213,7 @@ const CarryTradeTracker: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="currency" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => [`${value}%`, 'Interest Rate']} />
+                  <Tooltip formatter={(value: number | string) => [`${value}%`, 'Interest Rate']} />
                   <Bar dataKey="rate" />
                 </BarChart>
               </ResponsiveContainer>

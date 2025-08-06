@@ -1,5 +1,27 @@
 import { Trade } from '../types/trade';
 
+// Type definition for the rates object in the API response
+interface ApiResponseRates {
+  [key: string]: number;
+}
+
+// Type definition for the expected API response structure
+interface ExchangeRateApiResponse {
+  rates?: ApiResponseRates;
+  conversion_rates?: ApiResponseRates;
+  time_last_update_unix?: number;
+}
+
+// Type guard to check if the data matches the expected API response structure
+function isApiResponseData(data: unknown): data is ExchangeRateApiResponse {
+  if (typeof data !== 'object' || data === null) return false;
+
+  const hasRates = 'rates' in data && typeof (data as ExchangeRateApiResponse).rates === 'object';
+  const hasConversionRates = 'conversion_rates' in data && typeof (data as ExchangeRateApiResponse).conversion_rates === 'object';
+
+  return hasRates || hasConversionRates;
+}
+
 export interface ExchangeRate {
   fromCurrency: string;
   toCurrency: string;
@@ -69,7 +91,7 @@ interface ApiConfig {
 }
 
 export class CurrencyConverterService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+    private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
   private requestCounts: Map<string, number[]> = new Map();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes for real-time rates
   private historicalCacheTimeout = 60 * 60 * 1000; // 1 hour for historical data
@@ -113,7 +135,7 @@ export class CurrencyConverterService {
     return recentRequests.length < (api?.rateLimit || 5);
   }
 
-  private getCached(key: string, isHistorical = false): any | null {
+    private getCached(key: string, isHistorical = false): unknown | null {
     const cached = this.cache.get(key);
     const timeout = isHistorical ? this.historicalCacheTimeout : this.cacheTimeout;
     
@@ -123,14 +145,14 @@ export class CurrencyConverterService {
     return null;
   }
 
-  private setCached(key: string, data: any): void {
+    private setCached(key: string, data: unknown): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
-  async getExchangeRates(baseCurrency = 'USD'): Promise<ExchangeRate[]> {
+    async getExchangeRates(baseCurrency = 'USD'): Promise<ExchangeRate[]> {
     const cacheKey = `rates_${baseCurrency}`;
     const cached = this.getCached(cacheKey);
-    if (cached) return cached;
+    if (cached) return cached as ExchangeRate[];
 
     try {
       // Try live APIs first
@@ -164,19 +186,29 @@ export class CurrencyConverterService {
     const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      throw new Error(`API request failed: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data: unknown = await response.json();
+    this.requestCounts.set(api.name, [...(this.requestCounts.get(api.name) || []), Date.now()]);
     return this.parseApiResponse(data, baseCurrency, api.name);
   }
 
-  private parseApiResponse(data: any, baseCurrency: string, source: string): ExchangeRate[] {
+  private parseApiResponse(data: unknown, baseCurrency: string, source: string): ExchangeRate[] {
+    if (!isApiResponseData(data)) {
+      console.warn('Invalid API response structure:', data);
+      return [];
+    }
     const rates: ExchangeRate[] = [];
     const timestamp = new Date();
 
-    if (data.rates) {
-      for (const [currency, rate] of Object.entries(data.rates)) {
+    interface ApiResponse {
+      rates: Record<string, number>;
+    }
+    
+    if (typeof data === 'object' && data !== null && 'rates' in data && typeof (data as ApiResponse).rates === 'object') {
+      const apiData = data as ApiResponse;
+      for (const [currency, rate] of Object.entries(apiData.rates)) {
         if (typeof rate === 'number') {
           rates.push({
             fromCurrency: baseCurrency,
@@ -292,23 +324,31 @@ export class CurrencyConverterService {
     };
   }
 
-  async getCurrencyPairs(): Promise<CurrencyPair[]> {
+      async getCurrencyPairs(): Promise<CurrencyPair[]> {
     const cacheKey = 'currency_pairs';
     const cached = this.getCached(cacheKey);
-    if (cached) return cached;
+    if (cached) return cached as CurrencyPair[];
 
     try {
       const pairs: CurrencyPair[] = [];
-      
+
       for (const pairString of this.commonPairs) {
         const [base, quote] = pairString.split('/');
+
+        if (!base || !quote) {
+          console.warn(`Invalid currency pair string found: ${pairString}`);
+          continue;
+        }
+
         const conversion = await this.convertCurrency(1, base, quote);
-        
+
         // Generate sample market data
         const change24h = (Math.random() - 0.5) * 0.02; // ±1% change
         const changePercent24h = change24h * 100;
-        const high24h = conversion.rate * (1 + Math.abs(change24h) + Math.random() * 0.01);
-        const low24h = conversion.rate * (1 - Math.abs(change24h) - Math.random() * 0.01);
+        const high24h =
+          conversion.rate * (1 + Math.abs(change24h) + Math.random() * 0.01);
+        const low24h =
+          conversion.rate * (1 - Math.abs(change24h) - Math.random() * 0.01);
 
         pairs.push({
           pair: pairString,
@@ -319,7 +359,7 @@ export class CurrencyConverterService {
           changePercent24h,
           high24h,
           low24h,
-          volume24h: Math.random() * 1000000 // Sample volume
+          volume24h: Math.random() * 1000000, // Sample volume
         });
       }
 
@@ -332,23 +372,25 @@ export class CurrencyConverterService {
   }
 
   private generateSamplePairs(): CurrencyPair[] {
-    return this.commonPairs.map(pairString => {
-      const [base, quote] = pairString.split('/');
-      const baseRate = Math.random() * 2 + 0.5; // Random rate between 0.5-2.5
-      const change24h = (Math.random() - 0.5) * 0.02;
-      
-      return {
-        pair: pairString,
-        baseCurrency: base,
-        quoteCurrency: quote,
-        currentRate: baseRate,
-        change24h,
-        changePercent24h: change24h * 100,
-        high24h: baseRate * (1 + Math.abs(change24h) + 0.005),
-        low24h: baseRate * (1 - Math.abs(change24h) - 0.005),
-        volume24h: Math.random() * 1000000
-      };
-    });
+    return this.commonPairs
+      .map((p): CurrencyPair | null => {
+        const [base, quote] = p.split('/');
+        if (!base || !quote) {
+          return null;
+        }
+        return {
+          pair: p,
+          baseCurrency: base,
+          quoteCurrency: quote,
+          currentRate: 1 + (Math.random() - 0.5) * 0.1,
+          change24h: (Math.random() - 0.5) * 0.02,
+          changePercent24h: (Math.random() - 0.5) * 2,
+          high24h: 1.05 + (Math.random() - 0.5) * 0.1,
+          low24h: 0.95 + (Math.random() - 0.5) * 0.1,
+          volume24h: Math.random() * 1000000,
+        };
+      })
+      .filter((p): p is CurrencyPair => p !== null);
   }
 
   async getHistoricalRates(
@@ -357,8 +399,8 @@ export class CurrencyConverterService {
     days = 30
   ): Promise<HistoricalRate[]> {
     const cacheKey = `historical_${fromCurrency}_${toCurrency}_${days}`;
-    const cached = this.getCached(cacheKey, true);
-    if (cached) return cached;
+        const cached = this.getCached(cacheKey, true);
+    if (cached) return cached as HistoricalRate[];
 
     try {
       // Generate sample historical data
@@ -371,9 +413,9 @@ export class CurrencyConverterService {
     }
   }
 
-  private generateHistoricalData(
-    fromCurrency: string,
-    toCurrency: string,
+      private generateHistoricalData(
+    _fromCurrency: string,
+    _toCurrency: string,
     days: number
   ): HistoricalRate[] {
     const data: HistoricalRate[] = [];
@@ -393,7 +435,7 @@ export class CurrencyConverterService {
       const low = rate * (1 - Math.random() * 0.01);
       
       data.push({
-        date: date.toISOString().split('T')[0],
+        date: date.toISOString().split('T')[0] || date.toISOString(),
         rate: parseFloat(rate.toFixed(6)),
         high: parseFloat(high.toFixed(6)),
         low: parseFloat(low.toFixed(6)),
@@ -404,13 +446,13 @@ export class CurrencyConverterService {
     return data;
   }
 
-  async analyzeConversion(
+    async analyzeConversion(
     fromCurrency: string,
     toCurrency: string
   ): Promise<ConversionAnalysis> {
     const cacheKey = `analysis_${fromCurrency}_${toCurrency}`;
     const cached = this.getCached(cacheKey);
-    if (cached) return cached;
+    if (cached) return cached as ConversionAnalysis;
 
     try {
       const conversion = await this.convertCurrency(1, fromCurrency, toCurrency);
@@ -496,9 +538,9 @@ export class CurrencyConverterService {
     }
 
     const conversions = trades.map(trade => {
-      const [base, quote] = trade.pair.split('/');
+            const [base, quote] = trade.currencyPair.split('/');
       return {
-        pair: trade.pair,
+                pair: trade.currencyPair,
         rate: trade.entryPrice,
         volume: trade.lotSize,
         baseCurrency: base,
@@ -510,9 +552,13 @@ export class CurrencyConverterService {
     const volumes = conversions.map(c => c.volume);
     
     const currencyBreakdown: { [key: string]: number } = {};
-    conversions.forEach(conv => {
-      currencyBreakdown[conv.baseCurrency] = (currencyBreakdown[conv.baseCurrency] || 0) + conv.volume;
-      currencyBreakdown[conv.quoteCurrency] = (currencyBreakdown[conv.quoteCurrency] || 0) + conv.volume;
+        conversions.forEach(conv => {
+      if (conv.baseCurrency) {
+        currencyBreakdown[conv.baseCurrency] = (currencyBreakdown[conv.baseCurrency] || 0) + conv.volume;
+      }
+      if (conv.quoteCurrency) {
+        currencyBreakdown[conv.quoteCurrency] = (currencyBreakdown[conv.quoteCurrency] || 0) + conv.volume;
+      }
     });
 
     return {

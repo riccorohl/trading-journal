@@ -6,7 +6,6 @@ import {
   BarChart3,
   Play,
   Calculator,
-  Newspaper,
   Plus,
   Upload,
   LogOut,
@@ -30,7 +29,6 @@ const menuItems = [
   { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'trades', label: 'Trades', icon: TrendingUp },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'news', label: 'News', icon: Newspaper },
   { id: 'playbooks', label: 'Playbooks', icon: Play },
   { id: 'tools', label: 'Tools', icon: Calculator },
 ];
