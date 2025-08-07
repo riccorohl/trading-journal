@@ -114,20 +114,20 @@ const DashboardV2 = () => {
 
   // Metrics calculation
   const metrics = useMemo(() => {
-    const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
-    if (closedTrades.length === 0) return { netPnL: 0, tradeExpectancy: 0, profitFactor: 0, winRate: 0, avgWin: 0, avgLoss: 0, totalTrades: 0, zellaScore: 0 };
-    const totalPnL = closedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
-    const losingTrades = closedTrades.filter(t => (t.pnl || 0) < 0);
+    const closedTradesWithPnL = trades.filter(t => t.status === 'closed' && t.pnl !== undefined);
+    if (closedTradesWithPnL.length === 0) return { netPnL: 0, tradeExpectancy: 0, profitFactor: 0, winRate: 0, avgWin: 0, avgLoss: 0, totalTrades: 0, zellaScore: 0 };
+    const totalPnL = closedTradesWithPnL.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const winningTrades = closedTradesWithPnL.filter(t => (t.pnl || 0) > 0);
+    const losingTrades = closedTradesWithPnL.filter(t => (t.pnl || 0) < 0);
     const grossWins = winningTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
     const grossLosses = Math.abs(losingTrades.reduce((sum, t) => sum + (t.pnl || 0), 0));
-    const winRate = (winningTrades.length / closedTrades.length) * 100;
+    const winRate = (winningTrades.length / closedTradesWithPnL.length) * 100;
     const avgWin = winningTrades.length > 0 ? grossWins / winningTrades.length : 0;
     const avgLoss = losingTrades.length > 0 ? grossLosses / losingTrades.length : 0;
     const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? 999 : 0;
-    const tradeExpectancy = totalPnL / closedTrades.length;
+    const tradeExpectancy = totalPnL / closedTradesWithPnL.length;
     const zellaScore = Math.min(100, Math.max(0, (winRate * 0.3) + (Math.min(profitFactor * 10, 50) * 0.4) + (Math.min(avgWin / Math.max(avgLoss, 1), 10) * 0.3 * 10)));
-    return { netPnL: totalPnL, tradeExpectancy, profitFactor, winRate, avgWin, avgLoss, totalTrades: closedTrades.length, zellaScore };
+    return { netPnL: totalPnL, tradeExpectancy, profitFactor, winRate, avgWin, avgLoss, totalTrades: closedTradesWithPnL.length, zellaScore };
   }, [trades]);
 
   const availableWidgets = getAvailableWidgets(mainWidgets.filter((w): w is string => w !== null));
