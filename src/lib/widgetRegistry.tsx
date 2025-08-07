@@ -219,7 +219,7 @@ export const WIDGET_REGISTRY: WidgetConfig[] = [
   { id: 'zellaScore', title: 'Zella Score', component: ZellaScoreWidget, defaultLayout: { w: 6, h: 4 }, minSize: { w: 6, h: 4 }, category: 'analytics', description: 'Overall trading performance score' },
   { id: 'recentTrades', title: 'Recent Trades', component: RecentTradesWidget, defaultLayout: { w: 6, h: 4 }, minSize: { w: 6, h: 4 }, category: 'analytics', description: 'List of your most recent trades' },
   { id: 'performanceChart', title: 'Performance Chart', component: PerformanceChartWidget, defaultLayout: { w: 6, h: 4 }, minSize: { w: 6, h: 4 }, category: 'charts', description: 'Cumulative P&L over time' },
-  { id: 'calendar', title: 'Trading Calendar', component: CalendarWidget, defaultLayout: { w: 6, h: 4 }, minSize: { w: 6, h: 4 }, category: 'tools', description: 'Calendar view of your trading activity' }
+  { id: 'calendar', title: '', component: CalendarWidget, defaultLayout: { w: 6, h: 4 }, minSize: { w: 6, h: 4 }, category: 'tools', description: '' }
 ];
 
 // Default dashboard layout
