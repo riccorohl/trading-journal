@@ -103,8 +103,8 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
             <div className="flex items-center space-x-2">
               <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 relative overflow-hidden">
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${getProgressBarColor(data.color)} absolute top-0 left-0 progress-bar`}
-                  data-progress={Math.min(data.progress, 100)}
+                  className={`h-2 rounded-full transition-all duration-300 ${getProgressBarColor(data.color)} absolute top-0 left-0`}
+                  style={{ width: `${Math.min(data.progress, 100)}%` }}
                 />
               </div>
               <div className="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium bg-white border-gray-200">

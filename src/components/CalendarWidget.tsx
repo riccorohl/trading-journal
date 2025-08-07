@@ -7,9 +7,10 @@ import { Trade } from '../types/trade'
 
 interface CalendarWidgetProps {
   trades?: Trade[]
+  onDateClick?: (date: string) => void
 }
 
-export default function CalendarWidget({ trades = [] }: CalendarWidgetProps) {
+export default function CalendarWidget({ trades = [], onDateClick }: CalendarWidgetProps) {
   const [currentDate, setCurrentDate] = React.useState(new Date())
 
   const today = new Date()
@@ -149,6 +150,12 @@ export default function CalendarWidget({ trades = [] }: CalendarWidgetProps) {
             return (
               <div
                 key={index}
+                onClick={() => {
+                  const dateString = date.toISOString().split('T')[0];
+                  if (dateString && onDateClick) {
+                    onDateClick(dateString);
+                  }
+                }}
                 className={`
                   min-h-[50px] p-2 border rounded-md flex flex-col items-center justify-center text-sm
                   ${isCurrentMonth(date) ? "bg-background" : "bg-muted/30 text-muted-foreground"}
