@@ -489,7 +489,7 @@ const TradeLog: React.FC = () => {
       )}
 
       <EditTradeModal 
-        trade={trades.find(t => t.id === editingTradeId) as any || null}
+        trade={trades.find(t => t.id === editingTradeId) || null}
         isOpen={editingTradeId !== null}
         onClose={() => setEditingTradeId(null)}
       />

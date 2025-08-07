@@ -72,10 +72,12 @@ export const TableCell: React.FC<TableCellProps> = ({
   }
 
   // Get the value from the trade object
-  const getValue = (field: keyof Trade | string, trade: Trade): any => {
+  const getValue = (field: keyof Trade | string, trade: Trade) => {
     if (typeof field === 'string' && field.includes('.')) {
       // Handle nested properties if needed in the future
-      return field.split('.').reduce((obj: any, key: string) => obj?.[key], trade);
+      return field.split('.').reduce((obj: Record<string, unknown>, key: string) => {
+        return obj?.[key] as Record<string, unknown>;
+      }, trade as unknown as Record<string, unknown>);
     }
     return trade[field as keyof Trade];
   };
@@ -83,7 +85,7 @@ export const TableCell: React.FC<TableCellProps> = ({
   const value = getValue(column.field, trade);
   
   // Apply formatting if provided
-  const formattedValue = column.format ? column.format(value, trade) : value;
+  const formattedValue = column.format ? column.format(value, trade) : String(value ?? '');
 
   const cellClass = `px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900`;
 

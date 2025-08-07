@@ -19,8 +19,8 @@ const DashboardV2 = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   
-  // State for the customizable grid - now limited to 4 slots
-  const [mainWidgets, setMainWidgets] = useState<(string | null)[]>([...DEFAULT_MAIN_WIDGETS.slice(0, 4)]);
+  // State for the customizable grid - now 2 slots with calendar in first slot
+  const [mainWidgets, setMainWidgets] = useState<(string | null)[]>([...DEFAULT_MAIN_WIDGETS.slice(0, 1), null]);
   
   // State for customizable top metrics widgets
   const { getSelectedWidgets, updateWidget } = useDashboardConfig();
@@ -46,11 +46,18 @@ const DashboardV2 = () => {
       try {
         const savedLayout = await dashboardService.getUserLayout(user.uid);
         if (savedLayout && savedLayout.mainWidgets.length > 0) {
-          // Ensure we have exactly 4 slots, padding with null if necessary
-          const paddedWidgets: (string | null)[] = [...savedLayout.mainWidgets.slice(0, 4)];
-          while (paddedWidgets.length < 4) {
-            paddedWidgets.push(null);
+          // Filter out widgets we don't want (performanceChart, zellaScore, recentTrades) and limit to calendar only
+          let filteredWidgets = savedLayout.mainWidgets.filter(w => 
+            w === 'calendar'
+          );
+          
+          // If we don't have the calendar widget, add it
+          if (!filteredWidgets.includes('calendar')) {
+            filteredWidgets = ['calendar'];
           }
+          
+          // Ensure we have exactly 2 slots: calendar in first, empty in second
+          const paddedWidgets: (string | null)[] = [filteredWidgets[0] || 'calendar', null];
           setMainWidgets(paddedWidgets);
         }
       } catch (error) {
@@ -151,10 +158,10 @@ const DashboardV2 = () => {
           ))}
         </div>
 
-        {/* Static 2x2 Main Grid */}
+        {/* Static 1x2 Main Grid */}
         {!isLoadingLayout && (
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-[1000px]">
+            <div className="grid grid-cols-2 gap-4 h-[500px]">
               {mainWidgets.map((widgetId, index) => (
                 <div key={index} className="h-full min-h-0">
                   {widgetId ? (

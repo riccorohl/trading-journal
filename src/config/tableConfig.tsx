@@ -8,6 +8,7 @@ export interface TableColumn {
   category: 'basic' | 'pricing' | 'position' | 'risk' | 'analysis' | 'timing';
   width?: string;
   align?: 'left' | 'center' | 'right';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   format?: (value: any, trade: Trade) => React.ReactNode;
   sortable?: boolean;
   required?: boolean; // Can't be hidden

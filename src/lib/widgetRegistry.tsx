@@ -224,7 +224,7 @@ export const WIDGET_REGISTRY: WidgetConfig[] = [
 
 // Default dashboard layout
 export const DEFAULT_METRIC_WIDGETS = ['netPnl', 'tradeExpectancy', 'profitFactor', 'winRate', 'avgWinLoss'];
-export const DEFAULT_MAIN_WIDGETS = ['performanceChart', 'calendar', 'recentTrades', 'zellaScore'];
+export const DEFAULT_MAIN_WIDGETS = ['calendar'];
 
 // Helper functions
 export const getWidgetById = (id: string): WidgetConfig | undefined => WIDGET_REGISTRY.find(widget => widget.id === id);

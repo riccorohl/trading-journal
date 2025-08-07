@@ -43,7 +43,7 @@ export const AVAILABLE_WIDGETS: DashboardWidget[] = [
     category: 'performance',
     getValue: (trades) => {
       const closedTrades = trades.filter(trade => trade.status === 'closed');
-      if (closedTrades.length === 0) return { value: '$0.00', subtitle: 'Per trade' };
+      if (closedTrades.length === 0) return { value: '$0.00', subtitle: 'Per trade', color: 'gray' };
       
       const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
       const totalCommissions = closedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
@@ -51,8 +51,9 @@ export const AVAILABLE_WIDGETS: DashboardWidget[] = [
       
       return {
         value: `$${expectancy.toFixed(2)}`,
-        subtitle: 'Per trade',
-        color: expectancy >= 0 ? 'green' : 'red'
+        subtitle: `${closedTrades.length} trades`,
+        color: expectancy >= 0 ? 'green' : 'red',
+        trend: expectancy >= 0 ? 'up' : 'down'
       };
     },
     description: 'Average profit/loss per trade'
@@ -74,8 +75,10 @@ export const AVAILABLE_WIDGETS: DashboardWidget[] = [
       
       return {
         value: factor.toFixed(2),
+        subtitle: `${winningTrades.length}W / ${losingTrades.length}L`,
         progress: progress,
-        color: factor >= 1.5 ? 'green' : factor >= 1 ? 'blue' : 'red'
+        color: factor >= 1.5 ? 'green' : factor >= 1 ? 'blue' : 'red',
+        trend: factor >= 1.2 ? 'up' : factor < 0.8 ? 'down' : undefined
       };
     },
     description: 'Ratio of gross profits to gross losses'
@@ -86,16 +89,17 @@ export const AVAILABLE_WIDGETS: DashboardWidget[] = [
     category: 'performance',
     getValue: (trades) => {
       const closedTrades = trades.filter(trade => trade.status === 'closed');
-      if (closedTrades.length === 0) return { value: '0.0%', progress: 0 };
+      if (closedTrades.length === 0) return { value: '0.0%', progress: 0, subtitle: '0 trades', color: 'gray' };
       
       const winners = closedTrades.filter(trade => (trade.pnl || 0) > 0);
       const rate = (winners.length / closedTrades.length) * 100;
       
       return {
         value: `${rate.toFixed(1)}%`,
-        subtitle: `${winners.length} wins`,
+        subtitle: `${winners.length} of ${closedTrades.length} trades`,
         progress: rate,
-        color: rate >= 60 ? 'green' : rate >= 40 ? 'blue' : 'red'
+        color: rate >= 60 ? 'green' : rate >= 40 ? 'blue' : 'red',
+        trend: rate >= 55 ? 'up' : rate < 35 ? 'down' : undefined
       };
     },
     description: 'Percentage of profitable trades'
